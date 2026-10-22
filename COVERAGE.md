@@ -32,14 +32,14 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 | B: local `/proc/self/mem` | n/a | n/a | n/a | no | local primitive |
 | C: per-directory handler mismatch + gadget | fail | fail | fail | application-level | one prefork child in the mod_php test |
 | D/E: OOM/state chains | public verification | public verification | not tested | D remote, E local in the harness | full D/E not public |
-| `PS(serializer)` across requests | pass (no stale) | pass (no stale) | not tested | n/a | FPM and mod_php |
+| `PS(serializer)` across requests | pass (no stale; per-dir mismatch + OOM abort: next request uses its own INI) | pass (no stale; same test) | not tested | n/a | FPM and mod_php |
 
 ## 3. Patch and guard status
 
 | Item | Status | Evidence |
 |---|---|---|
 | 8.4.27 includes the OOM/state-corruption fix | pass | `NEWS`, source diff, 0/5 control |
-| 8.4.27 resets `PS(serializer)` | fail (not present) | source diff |
+| 8.4.27 resets `PS(serializer)` | fail (not present; no exploitable stale measured: ini handler keeps pointer and INI paired) | source diff + per-directory abort test |
 | 8.4.27 includes PR #22113 fixed-SID guard | fail (not present) | PR open; source diff |
 | `session.use_strict_mode=1` blocks A fixed SID | pass | lab, 8.4.26/8.4.27/8.5.12 |
 | `session.use_only_cookies=1` alone blocks A | fail | A succeeded with SID only in multipart |

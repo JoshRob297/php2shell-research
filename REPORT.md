@@ -129,6 +129,15 @@ The 8.4.27 `ext/session/session.c` contains:
 The patch does **not** reset `PS(serializer)` and does **not** contain the fixed-SID guard from
 PR #22113. Those are different issues; see section 5.5 and `EVIDENCE.md`.
 
+The missing `PS(serializer)` reset was tested directly, because a stale serializer pointer
+would mean session-format confusion. With per-directory serializer differences
+(`php_serialize` in one directory, `php` in another), an OOM abort in either directory does not
+leave a stale serializer: the next request uses the serializer dictated by its own INI
+(verified through the session-file format), in both 8.4.26 and 8.4.27. The non-reset remains a
+defense-in-depth gap; no attacker-reachable divergence window was found (the INI update handler
+performs no limited-heap allocation). The configuration-level hazard (different handlers per
+directory) is a separate issue and stays in remediation.
+
 ## 5. Exploitation model
 
 ### 5.1 Preconditions
@@ -231,6 +240,7 @@ a command/output, a public source or a source-code comparison.
 | C on 8.4.26 / 8.4.27 / 8.5.12 | RCE in the lab harness |
 | E on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
 | `PS(serializer)` across requests, FPM and `mod_php` | No stale handler observed |
+| `PS(serializer)` with per-directory serializer differences + OOM abort (8.4.26/8.4.27) | No stale: the next request uses its own INI serializer (session-file format verified); divergence window not reachable |
 | FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable; RCE not reached; earlier write-primitive reading retracted |
 | 8.5.11 `fatal_error_backtraces` arm (symbol build) | Not reproducible: zval UNDEF -> valid `IS_ARRAY_EX` after the fetch, guarded by `Z_ISUNDEF`; 0 anomalies in 128+120 request sweeps |
 | OPcache SHM arm (8.4.26 vs 8.4.27) | No corruption (`wasted_memory=0`); measured differential: 8.4.27 completes the near-OOM compile and caches a valid entry, 8.4.26 fails every run |

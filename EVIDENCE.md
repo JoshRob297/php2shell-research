@@ -193,6 +193,26 @@ h2 direct:     H2=php
 No decode warning. The INI cycle restores the handler per request; no cross-request stale
 serializer was observed.
 
+### Per-directory serializer mismatch plus OOM abort
+
+Setup: mod_php prefork, one worker, two directories; `/a/` overrides
+`session.serialize_handler=php_serialize`, `/b/` keeps the global `php`. `abort.php` calls
+`session_start()` and then exhausts `memory_limit`; `check.php` calls `session_start()` and sets
+`$_SESSION["k"]="v"`, so the session file format reveals the effective serializer.
+
+| Sequence | File written | Effective serializer |
+|---|---|---|
+| `/a/check` | `a:1:{s:1:"k";s:1:"v";}` | php_serialize (directory INI) |
+| `/b/check` | `k\|s:1:"v";` | php (global INI) |
+| abort `/a/` -> `/b/check` | `k\|s:1:"v";` | no stale: next request uses php |
+| abort `/b/` -> `/a/check` | `a:1:{s:1:"k";s:1:"v";}` | no stale: next request uses php_serialize |
+
+Identical results on 8.4.26 and 8.4.27. The aborted request itself writes its session with the
+directory serializer (`a:0:{}`), so the pointer follows the INI; the shutdown restore returns it
+to the global value. `OnUpdateSerializeHandler` is the only writer of the pointer and runs on
+both the INI change and the restore, keeping INI and pointer paired. A divergence would require
+an allocation failure inside the handler, which performs no limited-heap allocation.
+
 ## 7. Static patch diff (8.4.26 -> 8.4.27)
 
 `ext/session/session.c`:
