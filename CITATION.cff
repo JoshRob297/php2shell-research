@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "php2shell: CVE-2026-109618 / CVE-2026-109619"
+message: "Independent verification, exploitation analysis and remediation guidance."
+type: report
+authors:
+  - name: "JoshRob"
+date-released: "2026-10-22"
+version: "1.0"
+license: "CC-BY-4.0"
+abstract: >-
+  Independent lab verification of the PHP request-startup vulnerabilities
+  CVE-2026-109618 and CVE-2026-109619, including public PoC review, impact
+  analysis, evidence matrices and remediation guidance. Analysis conducted with
+  multiple AI models and specialized subagents under human direction.
+keywords:
+  - PHP
+  - php2shell
+  - CVE-2026-109618
+  - CVE-2026-109619
+  - security research

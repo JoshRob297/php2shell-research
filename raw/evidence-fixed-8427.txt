@@ -1,0 +1,23 @@
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+[Wed Oct 21 23:14:43.800484 2026] [mpm_prefork:notice] [pid 1:tid 1] AH00163: Apache/2.4.69 (Debian) PHP/8.4.27 configured -- resuming normal operations
+[Wed Oct 21 23:14:43.800571 2026] [core:notice] [pid 1:tid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+<container-ip> - - [21/Oct/2026:23:14:44 +0000] "GET /index.php HTTP/1.1" 200 195 "-" "curl/7.88.1"
+<container-ip> - - [21/Oct/2026:23:14:44 +0000] "GET /index.php HTTP/1.1" 200 195 "-" "curl/7.88.1"
+<container-ip> - - [21/Oct/2026:23:14:52 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:52 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:52 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:53 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:53 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:54 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:54 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:54 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:55 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:55 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+[Wed Oct 21 23:14:55.813531 2026] [mpm_prefork:error] [pid 1:tid 1] AH00161: server reached MaxRequestWorkers setting, consider raising the MaxRequestWorkers setting
+<container-ip> - - [21/Oct/2026:23:14:55 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:56 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:56 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:57 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:57 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:14:57 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"

@@ -1,0 +1,11 @@
+== ASLR OFF 8.4.26 (5 runs) ==
+PROOF: uid=33(www-data) 5/5
+
+== ASLR OFF 8.4.27 ==
+HEAP_LEAK_FAILED, 0 abortos
+
+== leak ASLR OFF ==
+hex128: 4c4141...b534d21e47b85c6ea070caf4ff7f0000 (punteros 0x7ffff4ca..., 104 hits)
+
+== leak ASLR ON ==
+hex128: 4c4141...2705be810d803a79a070aa36cd72 (0 hits en rango 0x7f)

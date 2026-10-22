@@ -1,0 +1,73 @@
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+[Wed Oct 21 23:12:11.569899 2026] [mpm_prefork:notice] [pid 1:tid 1] AH00163: Apache/2.4.69 (Debian) PHP/8.4.26 configured -- resuming normal operations
+[Wed Oct 21 23:12:11.569988 2026] [core:notice] [pid 1:tid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+<container-ip> - - [21/Oct/2026:23:12:12 +0000] "GET /index.php HTTP/1.1" 200 195 "-" "curl/7.88.1"
+<container-ip> - - [21/Oct/2026:23:12:12 +0000] "GET /index.php HTTP/1.1" 200 195 "-" "curl/7.88.1"
+<container-ip> - - [21/Oct/2026:23:12:20 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:12:21.579560 2026] [mpm_prefork:error] [pid 1:tid 1] AH00161: server reached MaxRequestWorkers setting, consider raising the MaxRequestWorkers setting
+[Wed Oct 21 23:12:21.579722 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 18 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:12:22 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:22 +0000] "POST /index.php HTTP/1.1" 200 12195 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:23 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:12:23.583607 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 31 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:12:24 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:24 +0000] "POST /index.php HTTP/1.1" 200 12193 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:25 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:12:25.586608 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 32 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:12:26 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:26 +0000] "POST /index.php HTTP/1.1" 200 12295 "-" "-"
+<container-ip> - - [21/Oct/2026:23:12:26 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:12:27.589965 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 33 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:13:31 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:13:32 +0000] "POST /index.php HTTP/1.1" 200 12117 "-" "-"
+<container-ip> - - [21/Oct/2026:23:13:44 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:13:44 +0000] "POST /index.php HTTP/1.1" 200 12163 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:11 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:11 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:11 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:12 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:12 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:12 +0000] "POST /index.php HTTP/1.1" 200 841 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:12 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:13 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:13 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:13 +0000] "POST /index.php HTTP/1.1" 200 259 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:13 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 11941 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 275 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 275 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 275 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:14 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:15 +0000] "POST /index.php HTTP/1.1" 200 275 "-" "-"
+[Wed Oct 21 23:15:23.378554 2026] [mpm_prefork:notice] [pid 1:tid 1] AH00170: caught SIGWINCH, shutting down gracefully
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using <container-ip>. Set the 'ServerName' directive globally to suppress this message
+[Wed Oct 21 23:15:25.330569 2026] [mpm_prefork:notice] [pid 1:tid 1] AH00163: Apache/2.4.69 (Debian) PHP/8.4.26 configured -- resuming normal operations
+[Wed Oct 21 23:15:25.330653 2026] [core:notice] [pid 1:tid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+<container-ip> - - [21/Oct/2026:23:15:27 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:15:28.333662 2026] [mpm_prefork:error] [pid 1:tid 1] AH00161: server reached MaxRequestWorkers setting, consider raising the MaxRequestWorkers setting
+[Wed Oct 21 23:15:28.333822 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 18 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:15:29 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:29 +0000] "POST /index.php HTTP/1.1" 200 12223 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:29 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:15:30.337577 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 19 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:15:31 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:31 +0000] "POST /index.php HTTP/1.1" 200 12321 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:31 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:15:32.341735 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 20 exit signal Abort (6)
+<container-ip> - - [21/Oct/2026:23:15:33 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:33 +0000] "POST /index.php HTTP/1.1" 200 12035 "-" "-"
+<container-ip> - - [21/Oct/2026:23:15:33 +0000] "POST /index.php HTTP/1.1" 200 693 "-" "-"
+zend_mm_heap corrupted
+[Wed Oct 21 23:15:34.344899 2026] [core:notice] [pid 1:tid 1] AH00052: child pid 21 exit signal Abort (6)

