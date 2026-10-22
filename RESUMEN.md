@@ -47,7 +47,7 @@ instancia de PHP sea explotable con la misma PoC.
 | A con `use_only_cookies=1`, `strict=0`, SID solo en multipart | RCE en las tres versiones |
 | A con `strict=1` | Bloqueado en el caso medido |
 | `PS(serializer)` entre requests, FPM y `mod_php` | Sin handler stale |
-| FPM chain E (BG stale) en 8.4.26 | UAF reproducido con gdb (SIGSEGV en `var_push`, 502); 8.4.27 estable; RCE no alcanzada |
+| FPM chain E (BG stale) en 8.4.26 | DoS determinista (SIGSEGV en `var_push`, 502); mecanica medida (encoding del allocator); no es escritura arbitraria; 8.4.27 estable; RCE no alcanzada |
 
 ## Impacto
 
@@ -77,7 +77,7 @@ El parche 8.4.27 no reemplaza los controles de configuración y aplicación para
   build probado.
 - Los resultados dependen del kernel y del allocator; la misma PoC pública no reproduce en todos
   los hosts.
-- La cadena FPM se reprodujo hasta el UAF (crash 502); el RCE en FPM no se alcanzó. Se usaron los scripts de
+- La cadena FPM se reprodujo hasta el UAF (crash 502) y se midió su mecanica definitiva (el allocator recicla el run liberado como pagina de bin 16 y su linkage codificado sobreescribe `used_slots`): DoS determinista, no escritura arbitraria (lectura previa retractada). El RCE en FPM no se alcanzó. Se usaron los scripts de
   verificación públicos y la cadena en `mod_php`.
 - Las cadenas A/C/E dependen de LFI, handlers por directorio o escritura local, según el caso.
 - No se redistribuye código de exploit de terceros.

@@ -1,0 +1,62 @@
+FPM chain E - mecanica definitiva del crash - PHP 8.4.26
+=========================================================
+
+Build: phpdebug:8.4.26-fpm (-O1 -g3), un solo worker (pm.max_children=1),
+ASLR deshabilitado por contenedor (setarch -R). php.ini: memory_limit=32M,
+session.upload_progress.enabled=On, cleanup=Off, strict=0.
+
+Estado colgante tras el productor (decode OOM de una sesion de 28 MB):
+
+  (gdb) p basic_globals.unserialize.level
+  $1 = 1
+  (gdb) p/x basic_globals.unserialize.data
+  $2 = 0x7ffff6264000
+  (gdb) x/4gx ((void**)basic_globals.unserialize.data)[2]   # bloque dtor liberado
+  0x7ffff6267000:  0x0000000000000001  0x0000000000000000
+  0x7ffff6267010:  0x0000000000000000  0x0000000000000000
+
+  used_slots del bloque dtor liberado = 1 (residual del productor, acotado a
+  VAR_DTOR_ENTRIES_MAX); las escrituras de var_tmp_var caen dentro del bloque.
+
+Watchpoint sobre used_slots (d+0x38) durante el consumer:
+
+  Hardware watchpoint 1: *(long long*)(0x7ffff6264000+0x38)
+  W38HIT: val=0xcf9fce2864d5ac0b pc=0x5555559e8d95
+     0x5555559e8d85 <zend_mm_alloc_small_slow+237>: add    $0x0,%al
+     0x5555559e8d87 <zend_mm_alloc_small_slow+239>: mov    %rax,%rdx
+     0x5555559e8d8a <zend_mm_alloc_small_slow+242>: bswap  %rdx
+  rax=0x7ffff6264040 rdx=0xcf9fce2864d5ac0b rcx=0x7ffff6267ec0 rdi=0x140
+
+  Lectura: quien escribe used_slots es el allocator (zend_mm_alloc_small_slow),
+  no la HashTable. El run liberado de 12 KB (3 paginas) se entrega a bin 16
+  (zend_mm_alloc_pages) y la construccion de la free-list escribe punteros
+  codificados (bswap) sobre los primeros 8 bytes del area.
+
+Crash:
+
+  Program received signal SIGSEGV.
+  0x0000555555931647 in var_push (var_hashx=..., rval=0x7ffff6267020)
+      at var_unserializer.c:133
+  rax=0x7ffff6264038 rdx=0xcf9fce2864d5ac0b rsi=0x7ffff6267020
+  #1 php_var_unserialize_internal :886
+  #3 ps_srlzr_decode_php session.c:1135
+  #4 php_session_decode :279
+  #5 php_session_initialize :502
+
+  var_push lee used_slots = puntero codificado y escribe rval en
+  d + 0x48 + enc*8 (direccion fuera de mapa, fija por generacion de worker).
+  nginx devuelve 502 y el master respawnea al worker.
+
+Consecuencia:
+
+- Cadena E en FPM 8.4.26 = DoS determinista (SIGSEGV en var_push, 502), no una
+  escritura arbitraria controlable por contenido: el valor de used_slots lo fija
+  el allocator y no se encontro palanca de contenido sobre el en esta
+  configuracion de laboratorio.
+- La lectura previa que atribuia el valor del watchpoint a contenido de bucket
+  de HashTable era incorrecta y queda retractada: el valor es linkage interno
+  del allocator (verificado con desensamblado y registros en el punto exacto
+  del write).
+
+Verificacion (repeticion limpia): d=0x7ffff6264000, level=1, dtor residual
+{1,0,0,0}, consumer -> 502, SIGSEGV en var_push:133 con el mismo backtrace.

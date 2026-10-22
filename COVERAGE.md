@@ -16,7 +16,7 @@ Status definitions:
 | RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | not tested | mod_php prefork |
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested | offset-calibrated build |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
-| FPM session decode OOM / stale BG | not tested | UAF crash (502) reproduced with gdb; RCE not reached | not tested | not tested | CVE-2026-109619; 8.4.27 stable (early reset) |
+| FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; DoS, not arbitrary write; RCE not reached | not tested | not tested | CVE-2026-109619; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable (early reset) |
 | Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | not tested | geometry-dependent |
 
 ## 2. Request-level chains
@@ -43,6 +43,8 @@ Status definitions:
 | `session.upload_progress.enabled=0` blocks A | not tested (expected block) | A requires the handler |
 | `cleanup=On` blocks A deterministically | not proven | 2 race attempts failed; not conclusive |
 | `PS(serializer)` leak across requests | pass (not observed) | h1/h2, FPM and mod_php |
+| 8.5 `fatal_error_backtraces` arm | pass (not reproduced) | symbol build; zval UNDEF -> valid IS_ARRAY_EX; 0 anomalies in sweeps |
+| OPcache SHM corruption | pass (not reproduced) | 8.4.26 vs 8.4.27 differential; wasted_memory=0; 8.4.27 caches valid entry |
 
 ## 4. PoC reliability
 
@@ -68,7 +70,11 @@ Status definitions:
 
 ## 6. Gaps
 
-- The FPM stale-BG sequence was reproduced to a UAF crash; full RCE in FPM was not reached.
+- The FPM stale-BG sequence was reproduced to a deterministic UAF crash (DoS); the crash
+  mechanism was measured (allocator free-list encoding), and an earlier write-primitive reading
+  was retracted. Full RCE in FPM was not reached.
+- The 8.5 backtraces arm and the OPcache arm were tested and did not reproduce as
+  memory-safety issues in the lab.
 - The 12/12 and 15/15 cookie counts were withdrawn: controlled repetitions on the official image gave 0/3 (ASLR on) and 0/3 (ASLR off); the 4000-byte cookie is state-dependent.
 - `Off` + ASLR-on RCE was blocked by allocator geometry in the tested build.
 - Kernel/allocator portability is not solved; public PoC results vary by host.

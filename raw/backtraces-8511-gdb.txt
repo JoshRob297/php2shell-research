@@ -1,0 +1,49 @@
+Brazo fatal_error_backtraces - PHP 8.5.11 con simbolos - no reproducible
+======================================================================
+
+Build: phpdebug:8.5.11-fpm (-O1 -g3). php.ini: memory_limit=32M,
+fatal_error_backtraces=1, display_errors=On.
+
+Estatico (8.5.11 vs 8.5.12):
+
+- zend.c: en cada error: zval_ptr_dtor(&EG(last_fatal_error_backtrace));
+  ZVAL_UNDEF(&EG(last_fatal_error_backtrace)); luego, si no hay excepcion y
+  PG(fatal_error_backtraces) y el tipo es E_FATAL_ERRORS:
+  zend_fetch_debug_backtrace(&EG(last_fatal_error_backtrace), 0, ...).
+- main.c: if (!Z_ISUNDEF(EG(last_fatal_error_backtrace)))
+    backtrace = zend_trace_to_string(Z_ARRVAL(...), ...);
+- El diff 8.5.11 -> 8.5.12 no toca esta logica: los cambios son el marco de
+  OOM diferido (EG(delayed_oom), zend_mm_oom_info_dtor, zend_handle_delayed_oom,
+  guarda EXPECTED(EG(delayed_oom).state != ZEND_OOM_STATE_HANDLING)).
+
+Dinamico (trigger: OOM real, n mayor que memory_limit):
+
+  (gdb) break zend_fetch_debug_backtrace / php_error_cb / zend_trace_to_string
+
+  FETCH raw (antes del fetch):
+  0x...ee6630 <executor_globals+432>:  0x00007ff4a8857150  0x0000000000000000
+  ERRCB raw (despues del fetch):
+  0x...ee6630 <executor_globals+432>:  0x00007ff4a8857150  0x0000000000000307
+  TRACE ht=0x7ff4a8857150
+  #1 php_error_cb at main.c:1390
+  BAILOUT
+  #1 php_error_cb at main.c:1540
+
+  - Antes del fetch el zval es UNDEF (type=0) con un value residual; la guarda
+    Z_ISUNDEF impide leer ese puntero.
+  - Tras el fetch el zval es IS_ARRAY_EX (type=0x307 = IS_ARRAY(0x7) |
+    IS_TYPE_REFCOUNTED<<8 | IS_TYPE_COLLECTABLE<<8, Z_TYPE_FLAGS_SHIFT=8,
+    zend_types.h) con value = HashTable valida (gc 0x0000000700000001,
+    nTableMask 0xfffffffe). Estado valido, no corrupcion.
+  - El fetch corre durante el OOM usando el espacio libre del chunk ya
+    reservado y completa; el formateo del error recorre la traza y el bailout
+    de E_ERROR sigue su curso normal.
+
+Barrido: 128 requests con paso de 64 B en la frontera de OOM por version,
+60 fatales + 30 near-OOM + 30 OOM por version, y repeticion de verificacion:
+0 anomalias HTTP, 0 SIGSEGV, 0 salidas de worker (worker persistente de pid
+fijo durante todo el barrido; los logs no registran lineas exited/signal).
+
+Conclusion: no se reproduce estado parcial ni UAF sobre
+EG(last_fatal_error_backtrace) en 8.5.11 con estos triggers; el OOM diferido
+de 8.5.12 es hardening del camino de error, no un fix de UAF observable aqui.

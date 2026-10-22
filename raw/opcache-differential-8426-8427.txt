@@ -1,0 +1,43 @@
+Brazo OPcache - diferencial 8.4.26 vs 8.4.27 - sin corrupcion de SHM
+===================================================================
+
+Contenedores oficiales php:8.4.26-fpm y php:8.4.27-fpm con zend_extension=opcache
+(SHM compartida entre workers) y memory_limit=32M. Trigger: big.php con 60000
+asignaciones (998 KB de fuente); compilarlo supera el limite de memoria.
+
+Secuencia (tras reiniciar ambos contenedores, cache fria):
+
+  big.php x4 en 8.4.26:
+    run 1: 200 | Fatal error  (Allowed memory size ... exhausted)
+    run 2: 200 | Fatal error
+    run 3: 200 | Fatal error
+    run 4: 200 | Fatal error
+  big.php x4 en 8.4.27:
+    run 1: 200 | Fatal error
+    run 2: 200 | big-ok
+    run 3: 200 | big-ok
+    run 4: 200 | big-ok
+
+Cache tras la secuencia:
+
+  8.4.26: scripts en cache = ost.php, osl.php (big.php AUSENTE)
+          used_memory=9170656, wasted_memory=0
+  8.4.27: scripts en cache = big.php mem=3360640 (+ otros)
+          used_memory=12533280, wasted_memory=0
+
+Lectura:
+
+- 8.4.26: la compilacion falla por OOM en cada request; big.php nunca entra a
+  OPcache.
+- 8.4.27: el OOM diferido permite que la compilacion termine y se cachee; la
+  entrada es valida y ejecuta correctamente en las corridas siguientes
+  (incluidos otros workers).
+- Sin entradas parciales, wasted_memory=0, cache_full=false, sin crashes ni
+  salidas de worker en ninguno de los dos.
+- El diff 8.4.26 -> 8.4.27 no toca ext/opcache (solo un test .phpt); el
+  comportamiento observado se explica por el marco de OOM diferido en Zend/ y
+  main/.
+
+Conclusion: no se reproduce corrupcion de SHM de OPcache con triggers de
+compilacion/OOM. El diferencial medido es de tolerancia (8.4.27 completa la
+compilacion y cachea; 8.4.26 falla siempre), no de corrupcion.

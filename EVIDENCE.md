@@ -298,9 +298,37 @@ Differential:
 | Startup OOM with progress field (header bomb) | worker dies (`exit code 70`, 502) | 200 |
 | `request_parse_body()` on PUT with multipart | parses and writes the session | parses `$_POST`, no session write |
 
-8.5.11 vs 8.5.12 with `fatal_error_backtraces=1`: no observable differential with this consumer;
-the backtrace arm needs its own trigger and a symbol build (not yet measured).
+### Definitive crash mechanism (verified with a watchpoint)
 
-RCE was not reached: the remaining step is reclaiming the freed `struct php_unserialize_data`
-block with attacker-controlled bytes so the decode completes and the session write-back reaches
-a fake object serialize/destructor (JFrog's described flow).
+The value written over `used_slots` (`d+0x38`) is not bucket content: it is the allocator's
+free-list linkage. The freed 12 KB run (3 pages) is handed to bin 16 (`zend_mm_alloc_pages`
+inside `zend_mm_alloc_small_slow`), and the free-list construction stores an encoded pointer
+(`mov %rax,%rdx ; bswap %rdx`, `zend_mm_alloc_small_slow+242`) over the first 8 bytes of the
+area. `var_push` reads that value as `used_slots` and writes `rval` at `d + 0x48 + enc*8`
+(unmapped, fixed per worker generation) -> SIGSEGV -> 502. An earlier reading that attributed
+the watchpoint value to HashTable bucket content was wrong and is retracted. The residual
+`var_dtor_entries` block is bounded (`used_slots=1`, writes stay inside the block), so the dtor
+path adds no write primitive in this configuration. Raw: `raw/fpm-chain-e-encoding-8426.txt`.
+
+### 8.5 backtraces arm (symbol build)
+
+`phpdebug:8.5.11-fpm` with symbols; OOM trigger with `fatal_error_backtraces=1`. The
+`EG(last_fatal_error_backtrace)` zval is UNDEF before the fetch and a valid `IS_ARRAY_EX`
+array (type `0x307`, valid HashTable) afterwards; the `Z_ISUNDEF` guard in the error formatter
+prevents reading the residual value field. The fetch completes on the already-reserved chunk
+memory even during the OOM. Sweeps (128 requests at 64-byte granularity plus 120 fatals per
+version): no anomalies, no crashes, persistent worker pid. Not reproducible as a memory-safety
+issue in 8.5.11 with these triggers. Raw: `raw/backtraces-8511-gdb.txt`.
+
+### OPcache arm
+
+Official `php:8.4.26-fpm`/`php:8.4.27-fpm` with opcache and `memory_limit=32M`; compile-OOM
+trigger (60000-assignment file). 8.4.26 hard-fails the compile on every request and never
+caches; 8.4.27 completes the compile via the deferred-OOM framework and caches a valid entry
+that executes correctly (including in other workers). `wasted_memory=0`, no partial entries,
+no crashes in either version. No reproducible SHM corruption; the measured differential is
+tolerance, not corruption. Raw: `raw/opcache-differential-8426-8427.txt`.
+
+RCE in FPM was not reached. With the allocator-encoding mechanism measured, the chain E
+reproduction in this lab is a deterministic DoS (502); no content lever over `used_slots` was
+found in this configuration.

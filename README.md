@@ -47,7 +47,7 @@ or local conditions.
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on 8.4.26 / 8.4.27 / 8.5.12 |
 | A with `strict=1` | Blocked in the tested configuration |
 | Apache `mod_php` per-directory serializer test | No stale `PS(serializer)` across requests |
-| FPM chain E (stale `BG(unserialize)`), 8.4.26 | UAF crash (502) reproduced with gdb; 8.4.27 stable; RCE not reached |
+| FPM chain E (stale `BG(unserialize)`), 8.4.26 | Deterministic UAF crash (502); mechanism measured (allocator encoding); DoS, not arbitrary write; 8.4.27 stable; RCE not reached |
 
 ## Repository contents
 

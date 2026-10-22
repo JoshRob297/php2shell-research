@@ -2,8 +2,13 @@
 
 **CVE-2026-109618 / CVE-2026-109619**
 
-Version 1.0, 2026-10-22. Prepared by **JoshRob**. Independent security research. No hostnames,
+Version 1.2, 2026-10-22. Prepared by **JoshRob**. Independent security research. No hostnames,
 addresses, credentials or customer data.
+
+Changelog: v1.1 documented the FPM chain E reproduction. v1.2 records the definitive crash
+mechanism of chain E (allocator free-list encoding, DoS), retracts an earlier misreading of the
+watchpoint evidence, and closes the 8.5 `fatal_error_backtraces` and OPcache arms with symbol
+builds and controlled differentials (see section 6 and `EVIDENCE.md`).
 
 ## 1. Executive summary
 
@@ -99,8 +104,13 @@ The session module's decode path can run out of memory while reading a large ses
 upload progress can consume that state, leading to object/destructor confusion and a
 use-after-free. Public verification code demonstrates the OOM and stale-state sequence under
 PHP-FPM; this report independently reproduced the stale-state sequence on PHP-FPM 8.4.26 to a
-use-after-free crash (502) and verified that 8.4.27 closes it. The full RCE reproduction remains
-on `mod_php` prefork.
+use-after-free crash (502) and verified that 8.4.27 closes it. A symbol build with a hardware
+watchpoint shows the crash mechanism: the freed `struct php_unserialize_data` run is recycled as
+an allocator page for bin 16, and the free-list construction overwrites `used_slots` with an
+encoded pointer (`bswap` store in `zend_mm_alloc_small_slow`); `var_push` then writes outside
+the mapping and the worker dies (deterministic 502). No content-controlled write lever was
+found in this configuration, so chain E is documented here as a pre-authentication DoS on
+FPM 8.4.26, not as an arbitrary write. The full RCE reproduction remains on `mod_php` prefork.
 
 ### 4.4 The 8.4.27 patch
 
@@ -219,7 +229,9 @@ a command/output, a public source or a source-code comparison.
 | C on 8.4.26 / 8.4.27 / 8.5.12 | RCE in the lab harness |
 | E on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
 | `PS(serializer)` across requests, FPM and `mod_php` | No stale handler observed |
-| FPM chain E (stale `BG(unserialize)`) | UAF crash (502) reproduced on 8.4.26; 8.4.27 stable; RCE not reached |
+| FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable; RCE not reached; earlier write-primitive reading retracted |
+| 8.5.11 `fatal_error_backtraces` arm (symbol build) | Not reproducible: zval UNDEF -> valid `IS_ARRAY_EX` after the fetch, guarded by `Z_ISUNDEF`; 0 anomalies in 128+120 request sweeps |
+| OPcache SHM arm (8.4.26 vs 8.4.27) | No corruption (`wasted_memory=0`); measured differential: 8.4.27 completes the near-OOM compile and caches a valid entry, 8.4.26 fails every run |
 
 The scanner from one public fork reports 24/24 vulnerable versions using A/C/E. That result is
 consistent with our A/C/E tests, but it does not measure the OOM/state-corruption chain and it
@@ -273,9 +285,14 @@ chains; those require the application/configuration controls above.
   state-dependent.
 - Results are kernel- and allocator-sensitive. The same public PoC did not reproduce on every
   host.
-- The FPM stale-BG sequence (chain E) was independently reproduced to a UAF crash (502) with a
-  symbol build; full RCE in FPM was not reached. The `mod_php` chain remains the full RCE
-  reproduction.
+- The FPM stale-BG sequence (chain E) was independently reproduced to a deterministic UAF crash
+  (502) with a symbol build; the crash mechanism (allocator free-list encoding over `used_slots`)
+  was verified with a hardware watchpoint, and an earlier claim of an attacker-controlled write
+  primitive was retracted. Full RCE in FPM was not reached; the `mod_php` chain remains the full
+  RCE reproduction.
+- The 8.5 `fatal_error_backtraces` arm and the OPcache SHM arm were tested with symbol builds
+  and controlled differentials; neither reproduced as a memory-safety issue in the lab (see
+  section 6).
 - A/C/E results depend on lab prerequisites (LFI, per-directory handlers, local file planting).
 - Public PoC quality varies; one scanner produced a confirmed false positive on 8.4.27.
 - No third-party exploit code is redistributed in this repository.
