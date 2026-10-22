@@ -249,3 +249,26 @@ authorization.
   flags was required for offset calibration.
 - The 8.4.27 control used the same request generator and worker model; the absence of aborts and
   over-read is the relevant comparison, not a claim that every possible input is safe.
+
+## 10. Backing audit trail
+
+Map of each documented result to where its raw trail lives. Rows not yet
+backed are defined in `VERIFY.md`; they are the pre-publication checklist for
+the main operator agent. The lab repo referenced is `php2shell-audit`
+(private): progress docs live in `07-plan/progress/`.
+
+| EVIDENCE row / paragraph | Raw trail | Status |
+|---|---|---|
+| 2. `On`, ASLR on: RCE 3/3 | `php2shell-audit` PR #31 (progress `2026-10-22-orquestador-rce-oficial.md`) | backed (audit repo) |
+| 2. `Off`, ASLR off: RCE 3/3 | `php2shell-audit` PR #32 (progress `2026-10-22-orquestador-rce-off-entorno.md`) | backed (audit repo) |
+| 2. `Off`, ASLR on: 12/12 cookies; no leak | `php2shell-audit` PRs #32 and #34/#35 (delta 8.7 MB; full-window scan 0 hits over 8168 B) | backed (audit repo) |
+| 2. `Off`, ASLR on RCE attempt 0/3 | idem PR #32/#34 (leak blocked, stage 3 without `libphp`) | backed (audit repo) |
+| 2. warmup 15/15 (12 on + 3 off) | PR #32 aggregate; no per-run capture | **pending: VERIFY run 3** |
+| 2. `8.4.27` control 0/5 | none in any repo | **pending: VERIFY run 1** |
+| 3. A/C/E `uid=33` on 8.4.27 / 8.5.12 | none in any repo (harness described, no capture) | **pending: VERIFY run 2** |
+| 5/6. serializer checks | docs only; no numeric claim | n/a (no raw required) |
+| 7. patch diff excerpt | fixed image vendored diff (`max_request_body_size` guard) | backed (section text itself) |
+
+Rule for publication: a row marked **pending** stays out of the published
+snapshot unless `VERIFY.md` closes it first; correction note added to the
+REPORT body if a run contradicts the row.
