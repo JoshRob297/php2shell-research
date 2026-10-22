@@ -110,3 +110,4 @@ See `EVIDENCE.md` for the full matrices. The short version:
 - A/C/E: RCE with lab prerequisites on 8.4.26, 8.4.27 and 8.5.12.
 - A with `strict=1`: blocked in the tested configuration.
 - `PS(serializer)`: no stale handler across requests in FPM or `mod_php`.
+- FPM chain E (stale `BG(unserialize)`): reproduced to a UAF crash (502) on 8.4.26 with a symbol build; 8.4.27 stable; RCE not reached.

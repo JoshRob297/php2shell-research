@@ -16,7 +16,7 @@ Status definitions:
 | RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | not tested | mod_php prefork |
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested | offset-calibrated build |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
-| FPM session decode OOM / stale BG | not tested | public verification; not independently end-to-end | not tested | not tested | CVE-2026-109619; full FPM chain not reproduced |
+| FPM session decode OOM / stale BG | not tested | UAF crash (502) reproduced with gdb; RCE not reached | not tested | not tested | CVE-2026-109619; 8.4.27 stable (early reset) |
 | Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | not tested | geometry-dependent |
 
 ## 2. Request-level chains
@@ -68,7 +68,7 @@ Status definitions:
 
 ## 6. Gaps
 
-- The full FPM OOM chain was not independently reproduced end-to-end.
+- The FPM stale-BG sequence was reproduced to a UAF crash; full RCE in FPM was not reached.
 - The 12/12 and 15/15 cookie counts were withdrawn: controlled repetitions on the official image gave 0/3 (ASLR on) and 0/3 (ASLR off); the 4000-byte cookie is state-dependent.
 - `Off` + ASLR-on RCE was blocked by allocator geometry in the tested build.
 - Kernel/allocator portability is not solved; public PoC results vary by host.

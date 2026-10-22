@@ -13,6 +13,7 @@ or user data are included.
 | `ctl-8427.txt` | Final validation, 8.4.27 control, 5 runs: `HEAP_LEAK_FAILED`, no aborts |
 | `ace-8427.txt` | Final validation, A/C/E on 8.4.27-fpm: RCE `uid=33` |
 | `ace-8512.txt` | Final validation, A/C/E on 8.5.12-fpm: RCE `uid=33` |
+| `fpm-chain-e-8426.txt` | FPM chain E: gdb evidence of the `var_push` UAF, poison state and the 8.4.27 differential |
 
 The A/C/E and warmup matrices are summarized in `EVIDENCE.md`; their raw terminal captures are
 retained in the private lab repository and are available to reviewers on request, together with

@@ -98,7 +98,9 @@ The session module's decode path can run out of memory while reading a large ses
 `BG(unserialize)` state remains dirty after the abort. A later request that processes session
 upload progress can consume that state, leading to object/destructor confusion and a
 use-after-free. Public verification code demonstrates the OOM and stale-state sequence under
-PHP-FPM; this report's full RCE reproduction is on `mod_php` prefork.
+PHP-FPM; this report independently reproduced the stale-state sequence on PHP-FPM 8.4.26 to a
+use-after-free crash (502) and verified that 8.4.27 closes it. The full RCE reproduction remains
+on `mod_php` prefork.
 
 ### 4.4 The 8.4.27 patch
 
@@ -217,6 +219,7 @@ a command/output, a public source or a source-code comparison.
 | C on 8.4.26 / 8.4.27 / 8.5.12 | RCE in the lab harness |
 | E on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
 | `PS(serializer)` across requests, FPM and `mod_php` | No stale handler observed |
+| FPM chain E (stale `BG(unserialize)`) | UAF crash (502) reproduced on 8.4.26; 8.4.27 stable; RCE not reached |
 
 The scanner from one public fork reports 24/24 vulnerable versions using A/C/E. That result is
 consistent with our A/C/E tests, but it does not measure the OOM/state-corruption chain and it
@@ -270,8 +273,9 @@ chains; those require the application/configuration controls above.
   state-dependent.
 - Results are kernel- and allocator-sensitive. The same public PoC did not reproduce on every
   host.
-- The full FPM OOM chain was not independently reproduced end-to-end; the public verification
-  scripts and the `mod_php` chain were the basis for the OOM findings.
+- The FPM stale-BG sequence (chain E) was independently reproduced to a UAF crash (502) with a
+  symbol build; full RCE in FPM was not reached. The `mod_php` chain remains the full RCE
+  reproduction.
 - A/C/E results depend on lab prerequisites (LFI, per-directory handlers, local file planting).
 - Public PoC quality varies; one scanner produced a confirmed false positive on 8.4.27.
 - No third-party exploit code is redistributed in this repository.

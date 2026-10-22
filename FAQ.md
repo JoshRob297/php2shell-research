@@ -56,3 +56,11 @@ validated against commands, outputs or public sources. See `METHODOLOGY.md`.
 ## License
 
 Text under CC BY 4.0 (see `LICENSE`). Third-party PoCs remain under their own licenses.
+
+## Does the FPM variant work?
+
+The stale-BG chain E was reproduced on PHP-FPM 8.4.26 with a symbol build: a session decode OOM
+leaves `BG(unserialize)` stale, and the next request's upload-progress decode reuses the
+dangling pointer (SIGSEGV in `var_push`, 502). 8.4.27 resets the state early and stays stable.
+Full RCE in FPM was not reached; the crash is a denial-of-service primitive in the tested
+configuration.

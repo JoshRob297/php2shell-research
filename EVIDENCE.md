@@ -255,3 +255,52 @@ authorization.
   flags was required for offset calibration.
 - The 8.4.27 control used the same request generator and worker model; the absence of aborts and
   over-read is the relevant comparison, not a claim that every possible input is safe.
+
+
+## 10. FPM chain E (CVE-2026-109619)
+
+Environment: `phpdebug:8.4.26-fpm` (PHP 8.4.26 source, `-O1 -g3`, `--enable-fpm`), single FPM
+worker, nginx, `memory_limit=32M`, `display_errors=On`, `session.upload_progress.enabled=On`.
+Full reproduction in `raw/fpm-chain-e-8426.txt`.
+
+Producer: a 28 MB session file (`k|s:29360128:"AAA..."`) makes the read succeed and the decode
+OOM inside `php_var_unserialize`. After the request, gdb shows:
+
+```
+basic_globals.unserialize.level = 1
+basic_globals.unserialize.data = 0x7f7b81a64000   (dangling)
+```
+
+Consumer: a POST multipart with `PHP_SESSION_UPLOAD_PROGRESS`, a cookie whose session file
+exists, and an endpoint that reads `$_POST`, triggers the upload-progress decode, which reuses
+the dangling pointer (the `else` branch of `php_var_unserialize_init`) and crashes in `var_push`:
+
+```
+Program received signal SIGSEGV, Segmentation fault.
+#0 var_push at var_unserializer.c:133
+#1 php_var_unserialize_internal :886
+#2 php_var_unserialize :852
+#3 ps_srlzr_decode_php at session.c:1135
+#4 php_session_decode :279
+#5 php_session_initialize :502
+#6 php_session_rfc1867_update :3196
+#7 php_session_rfc1867_callback :3335
+#8 rfc1867_post_handler :973
+```
+
+nginx returns 502; the worker stays poisoned and crashes on every later non-empty decode.
+
+Differential:
+
+| Vector | 8.4.26 | 8.4.27 |
+|---|---|---|
+| Chain E (decode OOM -> stale BG -> consumer) | 502 / UAF | 200, stable |
+| Startup OOM with progress field (header bomb) | worker dies (`exit code 70`, 502) | 200 |
+| `request_parse_body()` on PUT with multipart | parses and writes the session | parses `$_POST`, no session write |
+
+8.5.11 vs 8.5.12 with `fatal_error_backtraces=1`: no observable differential with this consumer;
+the backtrace arm needs its own trigger and a symbol build (not yet measured).
+
+RCE was not reached: the remaining step is reclaiming the freed `struct php_unserialize_data`
+block with attacker-controlled bytes so the decode completes and the session write-back reaches
+a fake object serialize/destructor (JFrog's described flow).
