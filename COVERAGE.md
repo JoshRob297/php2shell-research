@@ -12,12 +12,15 @@ Status definitions:
 
 | Test | 8.4.21 | 8.4.26 | 8.4.27 | 8.5.12 | Notes |
 |---|---|---|---|---|---|
-| OOM abort / heap corruption | affected by version; not exploited | fail | pass | not tested | 8.4.27 control: 0/5, no aborts |
-| RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | not tested | mod_php prefork |
-| RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested | offset-calibrated build |
+| OOM abort / heap corruption | affected by version; not exploited | fail | pass | pass (0/3) | 8.4.27 control: 0/5, no aborts; fixed branches blocked at stage 1 |
+| RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | pass (0/3) | mod_php prefork; control rerun 3/3 in the same harness |
+| RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested here | offset-calibrated build; fixed branches not exercised in this profile |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
 | FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; DoS, not arbitrary write; RCE not reached | not tested | not tested | CVE-2026-109619; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable (early reset) |
-| Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | not tested | geometry-dependent |
+| Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
+
+Fixed branches 8.3.36 and 8.2.35 (same harness, 3 runs each): 0/3, blocked at stage 1 (heap
+leak). Raw: `raw/fixed-branches-verify.txt`.
 
 ## 2. Request-level chains
 

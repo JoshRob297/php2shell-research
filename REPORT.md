@@ -61,12 +61,14 @@ for 2026-10-22 and was moved forward.
 | 8.4.21 | Vulnerable by version; not exploited in this report | Prerequisites dependent |
 | 8.4.26 | Vulnerable (lab RCE) | RCE with lab prerequisites |
 | 8.4.27 | Fixed (vendor) | Still work with lab prerequisites |
-| 8.5.12 | Vendor-fixed for the OOM class; not independently OOM-tested | Still work with lab prerequisites |
-| 8.3.36 / 8.2.35 | Vendor-fixed; not independently tested | Not tested here |
+| 8.5.12 | Fixed (0/3 with the lab OOM chain; blocked at the heap leak stage) | Still work with lab prerequisites |
+| 8.3.36 / 8.2.35 | Fixed (0/3 each with the lab OOM chain; blocked at the heap leak stage) | Not tested here |
 
 The independent OOM/RCE reproduction used official `php:8.4.26-apache` and
-`php:8.4.27-apache` images. The request-level A/C/E differential additionally used
-`php:8.4.26-fpm`, `php:8.4.27-fpm` and `php:8.5.12-fpm`. See `EVIDENCE.md`.
+`php:8.4.27-apache` images, and the same harness was run against `php:8.5.12-apache`,
+`php:8.3.36-apache` and `php:8.2.35-apache` (0/3 each; the vulnerable control rerun in the same
+harness gave 3/3). The request-level A/C/E differential additionally used `php:8.4.26-fpm`,
+`php:8.4.27-fpm` and `php:8.5.12-fpm`. See `EVIDENCE.md` and `raw/fixed-branches-verify.txt`.
 
 A **Nextcloud 33.0.x test deployment** running PHP 8.4.21 under Apache `mod_php` prefork was
 used to validate the exposed configuration and patch level. The RCE proof was on the official
@@ -232,6 +234,10 @@ a command/output, a public source or a source-code comparison.
 | FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable; RCE not reached; earlier write-primitive reading retracted |
 | 8.5.11 `fatal_error_backtraces` arm (symbol build) | Not reproducible: zval UNDEF -> valid `IS_ARRAY_EX` after the fetch, guarded by `Z_ISUNDEF`; 0 anomalies in 128+120 request sweeps |
 | OPcache SHM arm (8.4.26 vs 8.4.27) | No corruption (`wasted_memory=0`); measured differential: 8.4.27 completes the near-OOM compile and caches a valid entry, 8.4.26 fails every run |
+| OOM/RCE harness rerun on `php:8.4.26-apache` (control) | 3/3 PROOF `uid=33(www-data)` (stages 1-2-3) |
+| OOM/RCE harness on `php:8.5.12-apache` | 0/3; blocked at stage 1 (heap leak) |
+| OOM/RCE harness on `php:8.3.36-apache` | 0/3; blocked at stage 1 (heap leak) |
+| OOM/RCE harness on `php:8.2.35-apache` | 0/3; blocked at stage 1 (heap leak) |
 
 The scanner from one public fork reports 24/24 vulnerable versions using A/C/E. That result is
 consistent with our A/C/E tests, but it does not measure the OOM/state-corruption chain and it

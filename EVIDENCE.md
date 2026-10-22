@@ -320,6 +320,15 @@ memory even during the OOM. Sweeps (128 requests at 64-byte granularity plus 120
 version): no anomalies, no crashes, persistent worker pid. Not reproducible as a memory-safety
 issue in 8.5.11 with these triggers. Raw: `raw/backtraces-8511-gdb.txt`.
 
+### Fixed branches verification (mod_php prefork, OOM/RCE harness)
+
+The same harness, container configuration and 9bie chain used for the vulnerable control were
+run against the four fixed branches. Control rerun in the same session: `php:8.4.26-apache`
+3/3 PROOF `uid=33(www-data)` (stages 1-2-3). Fixed: `php:8.4.27-apache` 0/3,
+`php:8.5.12-apache` 0/3, `php:8.3.36-apache` 0/3, `php:8.2.35-apache` 0/3; every failure stopped
+at stage 1 (heap leak), i.e. the OOM abort/state corruption does not occur. Raw:
+`raw/fixed-branches-verify.txt`.
+
 ### OPcache arm
 
 Official `php:8.4.26-fpm`/`php:8.4.27-fpm` with opcache and `memory_limit=32M`; compile-OOM
