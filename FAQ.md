@@ -62,5 +62,8 @@ Text under CC BY 4.0 (see `LICENSE`). Third-party PoCs remain under their own li
 The stale-BG chain E was reproduced on PHP-FPM 8.4.26 with a symbol build: a session decode OOM
 leaves `BG(unserialize)` stale, and the next request's upload-progress decode reuses the
 dangling pointer (SIGSEGV in `var_push`, 502). 8.4.27 resets the state early and stays stable.
-Full RCE in FPM was not reached; the crash is a denial-of-service primitive in the tested
-configuration.
+In the lab the chain goes further: when the dangling struct is reclaimed by the multipart field
+buffer, a fake `var_dtor_entries` turns the destructor walk into a controlled 16-byte write.
+Aimed at `sapi_module.ub_write` = `&system`, the script output executed a command
+(`uid=33(www-data)`). This required ASLR off, a locally planted 24-byte session file and a
+symbol build; the remote ASLR-on variant was not demonstrated.

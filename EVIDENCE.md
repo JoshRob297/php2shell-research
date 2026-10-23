@@ -327,8 +327,10 @@ inside `zend_mm_alloc_small_slow`), and the free-list construction stores an enc
 area. `var_push` reads that value as `used_slots` and writes `rval` at `d + 0x48 + enc*8`
 (unmapped, fixed per worker generation) -> SIGSEGV -> 502. An earlier reading that attributed
 the watchpoint value to HashTable bucket content was wrong and is retracted. The residual
-`var_dtor_entries` block is bounded (`used_slots=1`, writes stay inside the block), so the dtor
-path adds no write primitive in this configuration. Raw: `raw/fpm-chain-e-encoding-8426.txt`.
+`var_dtor_entries` block is bounded (`used_slots=1`, writes stay inside the block), so the
+residual block alone adds no write primitive in this configuration. The controlled variant below
+uses an attacker-owned fake `var_dtor_entries` in the reclaimed buffer instead. Raw:
+`raw/fpm-chain-e-encoding-8426.txt`.
 
 ### 8.5 backtraces arm (symbol build)
 
@@ -358,6 +360,31 @@ that executes correctly (including in other workers). `wasted_memory=0`, no part
 no crashes in either version. No reproducible SHM corruption; the measured differential is
 tolerance, not corruption. Raw: `raw/opcache-differential-8426-8427.txt`.
 
-RCE in FPM was not reached. With the allocator-encoding mechanism measured, the chain E
-reproduction in this lab is a deterministic DoS (502); no content lever over `used_slots` was
-found in this configuration.
+RCE in FPM was not reached with the residual-block mechanism alone. The chain E reproduction
+with the allocator-encoding mechanism and no content lever over `used_slots` is a deterministic
+DoS (502).
+
+### Controlled write and command execution (ub_write)
+
+A separate configuration controls the content of the walk. The 24-byte planted session
+`C|i:<V>;AAAA` fixes the layout and the multipart field buffer (12300 bytes) reclaims the
+dangling `php_unserialize_data`, so the attacker supplies both the fake struct and its fake
+`var_dtor_entries`: `last_dtor` points into the buffer and a negative `used_slots`
+(N = (T2 - d - 0x110)/16 = -2932019265844) wraps the walk to a chosen 16-aligned address. The
+destructor step writes `{value, IS_LONG}` there, 16 bytes.
+
+With T2 = `&sapi_module.ub_write` (0x555556ae2dd0, mod 16 = 0), value = `&system`
+(0x7ffff7070090), the sink becomes the output writer: each output chunk is passed as the
+command string (rdi = chunk, rsi ignored). The chunk from the script echo delivered
+`read=foo;id>/tmp/pwned`, the shell ran the assignment and the redirect, and `/tmp/pwned`
+contained `uid=33(www-data)`. The prior warnings and headers are the first eight benign system
+calls; the echo chunk is the ninth. The `system` return value (child status) breaks the output
+layer, so nginx returns 502 after the command already ran.
+
+Watchpoint on the write (`WATCH_ub_write: val=0x7ffff7070090`), the nine `system` calls with
+their arguments, and the `id` output: `raw/fpm-rce-ub-write.txt` (full run log). The session
+layout is exact: `C|i:<V>;AAAA` works; `hello|i:<V>;` (also 24 bytes) corrupts the layout
+before the write (SEGV in `tmp_var` without hitting the watchpoint).
+
+Prerequisites measured in the lab: ASLR off, a locally planted session file, and a symbol build
+for address calibration. The remote ASLR-on variant was not demonstrated.

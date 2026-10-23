@@ -16,7 +16,7 @@ Status definitions:
 | RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | pass (0/3) | mod_php prefork; control rerun 3/3 in the same harness |
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested here | offset-calibrated build; fixed branches not exercised in this profile |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
-| FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; DoS, not arbitrary write; RCE not reached | not tested | not tested | CVE-2026-109619; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable (early reset) |
+| FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; with the multipart-reclaimed struct, controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab | not tested | not tested | CVE-2026-109619; default mechanism = allocator free-list encoding over `used_slots`; controlled variant = fake `var_dtor_entries` (ASLR off, planted 24-byte session); 8.4.27 stable (early reset) |
 | Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
 
 Fixed branches 8.3.36 and 8.2.35 (same harness, 3 runs each): 0/3, blocked at stage 1 (heap
@@ -31,7 +31,7 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 | A with `cleanup=On` + race | not tested | inconclusive (2 attempts) | not tested | requires LFI | not a formal guarantee |
 | B: local `/proc/self/mem` | n/a | n/a | n/a | no | local primitive |
 | C: per-directory handler mismatch + gadget | fail | fail | fail | application-level | one prefork child in the mod_php test |
-| D/E: OOM/state chains | public verification | public verification | not tested | D remote, E local in the harness | full D/E not public |
+| D/E: OOM/state chains | public verification; FPM chain E reached command execution in the lab with local prerequisites | public verification | not tested | D remote, E local in the harness | full D/E not public; the FPM controlled-write variant is in `EVIDENCE.md` section 10 |
 | `PS(serializer)` across requests | pass (no stale; per-dir mismatch + OOM abort: next request uses its own INI) | pass (no stale; same test) | not tested | n/a | FPM and mod_php |
 
 ## 3. Patch and guard status
@@ -73,9 +73,11 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 
 ## 6. Gaps
 
-- The FPM stale-BG sequence was reproduced to a deterministic UAF crash (DoS); the crash
-  mechanism was measured (allocator free-list encoding), and an earlier write-primitive reading
-  was retracted. Full RCE in FPM was not reached.
+- The FPM stale-BG sequence was reproduced to a deterministic UAF crash (DoS); the default crash
+  mechanism was measured (allocator free-list encoding). A later controlled variant (fake
+  `var_dtor_entries` in the multipart-reclaimed struct) gives a 16-byte write and reached command
+  execution in the lab with local prerequisites (ASLR off, planted session); the remote ASLR-on
+  variant was not demonstrated.
 - The 8.5 backtraces arm and the OPcache arm were tested and did not reproduce as
   memory-safety issues in the lab.
 - The 12/12 and 15/15 cookie counts were withdrawn: controlled repetitions on the official image gave 0/3 (ASLR on) and 0/3 (ASLR off); the 4000-byte cookie is state-dependent.

