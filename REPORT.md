@@ -114,9 +114,11 @@ use-after-free crash (502) and verified that 8.4.27 closes it. A symbol build wi
 watchpoint shows the crash mechanism: the freed `struct php_unserialize_data` run is recycled as
 an allocator page for bin 16, and the free-list construction overwrites `used_slots` with an
 encoded pointer (`bswap` store in `zend_mm_alloc_small_slow`); `var_push` then writes outside
-the mapping and the worker dies (deterministic 502). No content-controlled write lever was
-found in this configuration, so chain E is documented here as a pre-authentication DoS on
-FPM 8.4.26, not as an arbitrary write. The full RCE reproduction remains on `mod_php` prefork.
+the mapping and the worker dies (deterministic 502). That is the default behavior when the freed
+run is not reclaimed by attacker data. A controlled variant (section 5.5) reclaims the struct
+with the multipart field buffer and turns the destructor walk into a controlled 16-byte write;
+aimed at `sapi_module.ub_write`, it executed a command in the lab. The full remote-style RCE
+reproduction remains on `mod_php` prefork.
 
 ### 4.4 The 8.4.27 patch
 
