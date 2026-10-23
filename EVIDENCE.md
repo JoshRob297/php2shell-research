@@ -98,7 +98,7 @@ default.
 |---|---|---|---|
 | A: upload-progress filename + LFI | RCE `uid=33` | RCE `uid=33` | RCE `uid=33` |
 | C: per-directory handler mismatch + gadget | RCE `uid=33` | RCE `uid=33` | RCE `uid=33` |
-| E: decode failure + destructor, local file planting | RCE `uid=33` | RCE `uid=33` | RCE `uid=33` |
+| E (request-level): decode failure + destructor, local file planting | RCE `uid=33` | RCE `uid=33` | RCE `uid=33` |
 
 Final validation 2026-10-22: A/C/E re-run on 8.4.27-fpm and 8.5.12-fpm; raw captures in
 `raw/ace-8427.txt` and `raw/ace-8512.txt`.
@@ -277,7 +277,7 @@ authorization.
   over-read is the relevant comparison, not a claim that every possible input is safe.
 
 
-## 10. FPM chain E (CVE-2026-109619)
+## 10. E-OOM: FPM stale BG (CVE-2026-109619)
 
 Environment: `phpdebug:8.4.26-fpm` (PHP 8.4.26 source, `-O1 -g3`, `--enable-fpm`), single FPM
 worker, nginx, `memory_limit=32M`, `display_errors=On`, `session.upload_progress.enabled=On`.
@@ -360,7 +360,7 @@ that executes correctly (including in other workers). `wasted_memory=0`, no part
 no crashes in either version. No reproducible SHM corruption; the measured differential is
 tolerance, not corruption. Raw: `raw/opcache-differential-8426-8427.txt`.
 
-RCE in FPM was not reached with the residual-block mechanism alone. The chain E reproduction
+RCE in FPM was not reached with the residual-block mechanism alone. The E-OOM reproduction
 with the allocator-encoding mechanism and no content lever over `used_slots` is a deterministic
 DoS (502).
 

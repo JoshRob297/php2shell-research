@@ -59,9 +59,9 @@ Text under CC BY 4.0 (see `LICENSE`). Third-party PoCs remain under their own li
 
 ## Does the FPM variant work?
 
-The stale-BG chain E was reproduced on PHP-FPM 8.4.26 with a symbol build: a session decode OOM
-leaves `BG(unserialize)` stale, and the next request's upload-progress decode reuses the
-dangling pointer (SIGSEGV in `var_push`, 502). 8.4.27 resets the state early and stays stable.
+The stale-BG chain (E-OOM) was reproduced on PHP-FPM 8.4.26 with a symbol build: a session
+decode OOM leaves `BG(unserialize)` stale, and the next request's upload-progress decode reuses
+the dangling pointer (SIGSEGV in `var_push`, 502). 8.4.27 resets the state early and stays stable.
 In the lab the chain goes further: when the dangling struct is reclaimed by the multipart field
 buffer, a fake `var_dtor_entries` turns the destructor walk into a controlled 16-byte write.
 Aimed at `sapi_module.ub_write` = `&system`, the script output executed a command

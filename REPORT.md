@@ -2,17 +2,20 @@
 
 **CVE-2026-109618 / CVE-2026-109619**
 
-Version 1.5, 2026-10-23. Prepared by **JoshRob**. Independent security research. No hostnames,
+Version 1.6, 2026-10-23. Prepared by **JoshRob**. Independent security research. No hostnames,
 addresses, credentials or customer data.
 
-Changelog: v1.1 documented the FPM chain E reproduction. v1.2 records the definitive crash
-mechanism of chain E (allocator free-list encoding, DoS), retracts an earlier misreading of the
-watchpoint evidence, and closes the 8.5 `fatal_error_backtraces` and OPcache arms with symbol
-builds and controlled differentials (see section 6 and `EVIDENCE.md`). v1.3 verified the fixed
-branches (8.5.12, 8.3.36, 8.2.35). v1.4 evaluated `PS(serializer)` without reset (no stale
-handler). v1.5 documents the controlled-write variant of chain E and the full FPM command
-execution reached in the lab (section 5.5, section 9, `EVIDENCE.md` section 10); the v1.2
-retraction covered the residual-block reading, not this controlled variant.
+Changelog: v1.1 documented the FPM stale-BG chain reproduction. v1.2 records the definitive crash
+mechanism of that chain (allocator free-list encoding, DoS), retracts an earlier misreading of
+the watchpoint evidence, and closes the 8.5 `fatal_error_backtraces` and OPcache arms with
+symbol builds and controlled differentials (see section 6 and `EVIDENCE.md`). v1.3 verified the
+fixed branches (8.5.12, 8.3.36, 8.2.35). v1.4 evaluated `PS(serializer)` without reset (no stale
+handler). v1.5 documents the controlled-write variant of the FPM stale-BG chain (E-OOM) and the
+full FPM command execution reached in the lab (section 5.5, section 9, `EVIDENCE.md` section
+10); the v1.2 retraction covered the residual-block reading, not this controlled variant. v1.6
+is an editorial revision: it labels the request-level arm E (decode failure + local file
+planting) and the FPM stale-`BG(unserialize)` chain E-OOM, and keeps the iteration history in
+this changelog; no measurement changes.
 
 ## 1. Executive summary
 
@@ -187,6 +190,10 @@ different calibration or leak.
 
 ### 5.5 The A/C/E request-level chains
 
+Name note: the public fork labels its third request-level arm E (decode failure + destructor,
+local file planting). This report calls that arm E (decode failure) and labels the FPM
+stale-`BG(unserialize)` chain E-OOM, the OOM/state primitive fixed in 8.4.27.
+
 Public PoCs group several chains under the php2shell name. They are useful, but they are not all
 the same vulnerability and not all are remote:
 
@@ -202,15 +209,15 @@ the same vulnerability and not all are remote:
 - **C — per-directory session handler mismatch.** One directory writes with `php_serialize`,
   another reads with `php`; a gadget's `__destruct` fires. This is an application-level
   configuration/gadget issue; the 8.4.27 memory patch does not address it.
-- **D/E — OOM/state chains.** The public D/E material includes verification scripts; the full
-  exploits are not public in the reviewed repository. In our FPM lab, E produces more than the
-  DoS. When the dangling `php_unserialize_data` is reclaimed by the multipart field buffer, the
-  attacker controls both the fake structure and its `var_dtor_entries`; a negative `used_slots`
-  turns the destructor walk into a 16-byte `{value, IS_LONG}` write at a chosen 16-aligned
-  address. The write was aimed at `sapi_module.ub_write`, replaced with the libc `system`
-  entry, so each subsequent output chunk runs as a command. Command execution was reached in
-  the lab, with local prerequisites: ASLR off, a locally planted 24-byte session file, and a
-  symbol build for address calibration. It is not a remote ASLR-on exploit.
+- **D and E-OOM — OOM/state chains.** The public D/E material includes verification scripts; the
+  full exploits are not public in the reviewed repository. In our FPM lab, E-OOM produces more
+  than the DoS. When the dangling `php_unserialize_data` is reclaimed by the multipart field
+  buffer, the attacker controls both the fake structure and its `var_dtor_entries`; a negative
+  `used_slots` turns the destructor walk into a 16-byte `{value, IS_LONG}` write at a chosen
+  16-aligned address. The write was aimed at `sapi_module.ub_write`, replaced with the libc
+  `system` entry, so each subsequent output chunk runs as a command. Command execution was
+  reached in the lab, with local prerequisites: ASLR off, a locally planted 24-byte session
+  file, and a symbol build for address calibration. It is not a remote ASLR-on exploit.
 
 ### 5.6 Generalizability: PHP-level bug, deployment-specific exploitability
 
@@ -250,10 +257,10 @@ a command/output, a public source or a source-code comparison.
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on all three |
 | A with `strict=1` | Blocked in the tested configuration |
 | C on 8.4.26 / 8.4.27 / 8.5.12 | RCE in the lab harness |
-| E on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
+| E (decode failure + destructor, local file planting) on 8.4.26 / 8.4.27 / 8.5.12 | RCE with local session-file planting |
 | `PS(serializer)` across requests, FPM and `mod_php` | No stale handler observed |
 | `PS(serializer)` with per-directory serializer differences + OOM abort (8.4.26/8.4.27) | No stale: the next request uses its own INI serializer (session-file format verified); divergence window not reachable |
-| FPM chain E (stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; default mechanism = allocator free-list encoding over `used_slots`; with the multipart-reclaimed struct (planted 24-byte session, ASLR off) the fake `var_dtor_entries` gives a controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab; 8.4.27 stable; earlier residual-block write reading retracted |
+| E-OOM (FPM stale `BG(unserialize)`) | Deterministic UAF crash (502) on 8.4.26; default mechanism = allocator free-list encoding over `used_slots`; with the multipart-reclaimed struct (planted 24-byte session, ASLR off) the fake `var_dtor_entries` gives a controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab; 8.4.27 stable |
 | 8.5.11 `fatal_error_backtraces` arm (symbol build) | Not reproducible: zval UNDEF -> valid `IS_ARRAY_EX` after the fetch, guarded by `Z_ISUNDEF`; 0 anomalies in 128+120 request sweeps |
 | OPcache SHM arm (8.4.26 vs 8.4.27) | No corruption (`wasted_memory=0`); measured differential: 8.4.27 completes the near-OOM compile and caches a valid entry, 8.4.26 fails every run |
 | OOM/RCE harness rerun on `php:8.4.26-apache` (control) | 3/3 PROOF `uid=33(www-data)` (stages 1-2-3) |
@@ -308,16 +315,14 @@ chains; those require the application/configuration controls above.
   target. The RCE proof was on the official PHP image; no other PHP applications were tested.
 - The `Off` + ASLR-on RCE was blocked by allocator geometry in the tested build; a different
   build or primitive may change the distance.
-- The earlier 12/12 and 15/15 cookie counts were withdrawn after controlled repetitions on the
-  official image gave 0/3 with ASLR on and 0/3 with ASLR off; the 4000-byte cookie is
-  state-dependent.
+- The 4000-byte cookie is state-dependent: controlled repetitions on the official image gave
+  0/3 with ASLR on and 0/3 with ASLR off.
 - Results are kernel- and allocator-sensitive. The same public PoC did not reproduce on every
   host.
-- The FPM stale-BG sequence (chain E) was independently reproduced to a deterministic UAF crash
+- The FPM stale-BG sequence (E-OOM) was independently reproduced to a deterministic UAF crash
   (502) with a symbol build; the crash mechanism (allocator free-list encoding over `used_slots`)
-  was verified with a hardware watchpoint. An earlier claim of an attacker-controlled write
-  primitive, based on the residual `var_dtor_entries` block, was retracted in v1.2. A later
-  measurement showed a different path: when the dangling struct is reclaimed by the multipart
+  was verified with a hardware watchpoint. The residual `var_dtor_entries` block alone does not
+  give an attacker-controlled write. When the dangling struct is reclaimed by the multipart
   field buffer, the fake `var_dtor_entries` gives a controlled 16-byte write. With ASLR off and
   a locally planted session file, that write reached `sapi_module.ub_write` and executed a
   command as the web user (section 5.5). The remote ASLR-on variant was not demonstrated; the

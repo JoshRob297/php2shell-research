@@ -110,7 +110,7 @@ See `EVIDENCE.md` for the full matrices. The short version:
 - A/C/E: RCE with lab prerequisites on 8.4.26, 8.4.27 and 8.5.12.
 - A with `strict=1`: blocked in the tested configuration.
 - `PS(serializer)`: no stale handler across requests in FPM or `mod_php`.
-- FPM chain E (stale `BG(unserialize)`): deterministic UAF crash (502) on 8.4.26 with a symbol
+- E-OOM (FPM stale `BG(unserialize)`): deterministic UAF crash (502) on 8.4.26 with a symbol
   build; with the multipart-reclaimed struct (planted 24-byte session, ASLR off) the fake
   `var_dtor_entries` gives a controlled 16-byte write to `sapi_module.ub_write` = `&system` and
   command execution in the lab; 8.4.27 stable; the remote ASLR-on variant was not demonstrated.

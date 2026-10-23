@@ -1,7 +1,7 @@
 # php2shell: resumen en español
 
 **CVE-2026-109618 / CVE-2026-109619** — investigación independiente, 2026-10-22 (actualizado
-2026-10-23, v1.5).
+2026-10-23, v1.6).
 Preparado por **JoshRob**. Análisis asistido por múltiples modelos de IA y subagentes bajo
 dirección humana; cada hallazgo se validó contra comandos, salidas o fuentes públicas. Ver
 `METHODOLOGY.md`.
@@ -48,7 +48,7 @@ instancia de PHP sea explotable con la misma PoC.
 | A con `use_only_cookies=1`, `strict=0`, SID solo en multipart | RCE en las tres versiones |
 | A con `strict=1` | Bloqueado en el caso medido |
 | `PS(serializer)` entre requests, FPM y `mod_php` | Sin handler stale |
-| FPM chain E (BG stale) en 8.4.26 | DoS determinista (SIGSEGV en `var_push`, 502) en la configuración por defecto; con el struct reclamado por el buffer del campo multipart (sesión plantada de 24 B), escritura controlada de 16 B en `sapi_module.ub_write` = `&system` y ejecución de comando en el lab (ASLR off, sesión plantada); 8.4.27 estable |
+| E-OOM (FPM BG stale) en 8.4.26 | DoS determinista (SIGSEGV en `var_push`, 502) en la configuración por defecto; con el struct reclamado por el buffer del campo multipart (sesión plantada de 24 B), escritura controlada de 16 B en `sapi_module.ub_write` = `&system` y ejecución de comando en el lab (ASLR off, sesión plantada); 8.4.27 estable |
 
 ## Impacto
 

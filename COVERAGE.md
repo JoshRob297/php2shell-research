@@ -31,7 +31,7 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 | A with `cleanup=On` + race | not tested | inconclusive (2 attempts) | not tested | requires LFI | not a formal guarantee |
 | B: local `/proc/self/mem` | n/a | n/a | n/a | no | local primitive |
 | C: per-directory handler mismatch + gadget | fail | fail | fail | application-level | one prefork child in the mod_php test |
-| D/E: OOM/state chains | public verification; FPM chain E reached command execution in the lab with local prerequisites | public verification | not tested | D remote, E local in the harness | full D/E not public; the FPM controlled-write variant is in `EVIDENCE.md` section 10 |
+| D and E-OOM: OOM/state chains | public verification; E-OOM reached command execution in the lab with local prerequisites | public verification | not tested | D remote, E-OOM local in the harness | full D/E not public; the FPM controlled-write variant is in `EVIDENCE.md` section 10 |
 | `PS(serializer)` across requests | pass (no stale; per-dir mismatch + OOM abort: next request uses its own INI) | pass (no stale; same test) | not tested | n/a | FPM and mod_php |
 
 ## 3. Patch and guard status

@@ -1,4 +1,4 @@
-FPM chain E: controlled 16-byte write to sapi_module.ub_write and command execution
+E-OOM (FPM stale BG): controlled 16-byte write to sapi_module.ub_write and command execution
 Lab: phpdebug:8.4.26-fpm (PHP 8.4.26, -O1 -g3, --enable-fpm), nginx, one worker,
 ASLR off, memory_limit=32M, display_errors=On.
 Planted session: /tmp/sessions/sess_consumerpoc0000000000000002 = "C|i:140737337819280;AAAA" (24 bytes).
