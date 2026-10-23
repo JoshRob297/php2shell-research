@@ -3,6 +3,7 @@ Lab: phpdebug:8.4.26-fpm (PHP 8.4.26, -O1 -g3, --enable-fpm), nginx, one worker,
 ASLR off, memory_limit=32M, display_errors=On.
 Planted session: /tmp/sessions/sess_consumerpoc0000000000000002 = "C|i:140737337819280;AAAA" (24 bytes).
 Addresses are from this lab boot only. Sanitized: no host names or infrastructure.
+Control characters: the CR in the PHP header chunks was normalized to LF in this capture.
 gdb: hardware watchpoint on *(long long*)&sapi_module.ub_write; breakpoint on system with x/s $rdi.
 
 $ gdb -p <worker> -x pocQ.gdb
