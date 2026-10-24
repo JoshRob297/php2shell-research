@@ -34,7 +34,7 @@ Image digests as pulled for the lab:
 | `display_errors=On`, ASLR on | 3 | RCE 3/3, `uid=33(www-data)` |
 | `display_errors=Off`, ASLR off | 3 | RCE 3/3, `uid=33(www-data)` |
 | `display_errors=Off`, ASLR on | 3 | Controlled repetitions 0/3; 4000-byte cookie state-dependent; heap pointers disclosed, no session-table read (section 11) |
-| `display_errors=Off`, ASLR on, RCE attempt | 3 | 0/3; blocked by the leak geometry |
+| `display_errors=Off`, ASLR on, RCE attempt | 3 | 0/3; no session-table read and no ASLR pin; route closed (section 11) |
 | `php:8.4.27-apache` control | 5 | 0/5; no aborts, no over-read (`raw/ctl-8427.txt`) |
 
 An earlier lab run reported 12/12 and 15/15 4000-byte cookie counts. Controlled repetitions on
