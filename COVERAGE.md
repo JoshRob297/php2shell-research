@@ -17,7 +17,7 @@ Status definitions:
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested here | offset-calibrated build; fixed branches not exercised in this profile |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
 | FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; with the multipart-reclaimed struct, controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab | not tested | not tested | CVE-2026-109619; default mechanism = allocator free-list encoding over `used_slots`; controlled variant = fake `var_dtor_entries` (ASLR off, planted 24-byte session); 8.4.27 stable (early reset) |
-| Memory disclosure via cookie | not tested | partial (4000-byte cookie discloses heap pointers; session table not reachable; libphp narrowed ~1.66 MB, not pinned) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
+| Memory disclosure via cookie | not tested | partial (4000-byte cookie discloses heap pointers; session table not reachable; libphp narrowed ~1.88 MB, not pinned) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
 
 Fixed branches 8.3.36 and 8.2.35 (same harness, 3 runs each): 0/3, blocked at stage 1 (heap
 leak). Raw: `raw/fixed-branches-verify.txt`.
@@ -81,7 +81,11 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 - The 8.5 backtraces arm and the OPcache arm were tested and did not reproduce as
   memory-safety issues in the lab.
 - The 12/12 and 15/15 cookie counts were withdrawn: controlled repetitions on the official image gave 0/3 (ASLR on) and 0/3 (ASLR off); the 4000-byte cookie is state-dependent.
-- `Off` + ASLR-on RCE was blocked by allocator geometry in the tested build.
+- `Off` + ASLR-on RCE was not achieved. The forged cookie discloses heap (id chunk base) but
+  never the session HashTable and narrows `libphp` to a 1.88 MB window without pinning it; the
+  channel is single-shot per OOM and `mod_php`-only, and on `mod_php` the leak and the
+  stale-`BG(unserialize)` primitive are mutually exclusive. Both mechanisms were tested and
+  closed.
 - Kernel/allocator portability is not solved; public PoC results vary by host.
 - A/C/E prerequisites are application-specific; the matrix records the lab conditions, not a
   universal exploitability claim.
