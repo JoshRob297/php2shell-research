@@ -105,7 +105,7 @@ See `EVIDENCE.md` for the full matrices. The short version:
 
 - 8.4.26 `mod_php`, `display_errors=On`, ASLR on: RCE 3/3.
 - 8.4.26 `mod_php`, `display_errors=Off`, ASLR off: RCE 3/3.
-- 8.4.26 `mod_php`, `display_errors=Off`, ASLR on: no stable leak; controlled repetitions 0/3; the 4000-byte cookie is state-dependent.
+- 8.4.26 `mod_php`, `display_errors=Off`, ASLR on: controlled repetitions 0/3; the 4000-byte cookie is state-dependent and over-reads into heap objects (47 pointer-like values per run); no session-table read, and the chunk-to-libphp distance varies ~1.66 MB.
 - 8.4.27: 0/5, no aborts or over-read.
 - A/C/E: RCE with lab prerequisites on 8.4.26, 8.4.27 and 8.5.12.
 - A with `strict=1`: blocked in the tested configuration.

@@ -50,7 +50,7 @@ or local conditions.
 |---|---|
 | PHP 8.4.26, `display_errors=On`, ASLR on | RCE 3/3 as `uid=33` |
 | PHP 8.4.26, `display_errors=Off`, ASLR off | RCE 3/3 as `uid=33` |
-| PHP 8.4.26, `display_errors=Off`, ASLR on | No stable leak; controlled repetitions 0/3; 4000-byte cookie state-dependent |
+| PHP 8.4.26, `display_errors=Off`, ASLR on | 4000-byte cookie state-dependent; no session-table read; heap pointers disclosed (see `EVIDENCE.md` section 11) |
 | PHP 8.4.27 control | 0/5, no aborts or over-read |
 | A/C/E request-level chains, 8.4.26 / 8.4.27 / 8.5.12 | RCE with the lab configuration; see `EVIDENCE.md` |
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on 8.4.26 / 8.4.27 / 8.5.12 |

@@ -33,7 +33,7 @@ Image digests as pulled for the lab:
 |---|---|---|
 | `display_errors=On`, ASLR on | 3 | RCE 3/3, `uid=33(www-data)` |
 | `display_errors=Off`, ASLR off | 3 | RCE 3/3, `uid=33(www-data)` |
-| `display_errors=Off`, ASLR on | 3 | No stable leak; controlled repetitions 0/3; 4000-byte cookie state-dependent |
+| `display_errors=Off`, ASLR on | 3 | Controlled repetitions 0/3; 4000-byte cookie state-dependent; heap pointers disclosed, no session-table read (section 11) |
 | `display_errors=Off`, ASLR on, RCE attempt | 3 | 0/3; blocked by the leak geometry |
 | `php:8.4.27-apache` control | 5 | 0/5; no aborts, no over-read (`raw/ctl-8427.txt`) |
 

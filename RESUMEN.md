@@ -42,7 +42,7 @@ instancia de PHP sea explotable con la misma PoC.
 |---|---|
 | 8.4.26, `display_errors=On`, ASLR on | RCE 3/3, `uid=33` |
 | 8.4.26, `display_errors=Off`, ASLR off | RCE 3/3, `uid=33` |
-| 8.4.26, `display_errors=Off`, ASLR on | Sin leak estable; repeticiones controladas 0/3; cookie de 4000 B dependiente del estado |
+| 8.4.26, `display_errors=Off`, ASLR on | Cookie de 4000 B dependiente del estado; sin lectura de la tabla de sesion; se divulgan punteros de heap (ver `EVIDENCE.md` seccion 11) |
 | 8.4.27 control | 0/5, sin abortos ni over-read |
 | A/C/E en 8.4.26 / 8.4.27 / 8.5.12 | RCE con la configuración del lab |
 | A con `use_only_cookies=1`, `strict=0`, SID solo en multipart | RCE en las tres versiones |

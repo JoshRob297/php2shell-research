@@ -251,7 +251,7 @@ a command/output, a public source or a source-code comparison.
 |---|---|
 | 8.4.26 `mod_php`, `display_errors=On`, ASLR on | RCE 3/3, `uid=33` |
 | 8.4.26 `mod_php`, `display_errors=Off`, ASLR off | RCE 3/3, `uid=33` |
-| 8.4.26 `mod_php`, `display_errors=Off`, ASLR on | No stable leak; controlled repetitions 0/3; 4000-byte cookie state-dependent |
+| 8.4.26 `mod_php`, `display_errors=Off`, ASLR on | 4000-byte cookie state-dependent; no session-table read; heap pointers disclosed (section: in-band channel audit) |
 | 8.4.27 control | 0/5, no aborts or over-read |
 | A on 8.4.26 / 8.4.27 / 8.5.12 with lab config | RCE |
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on all three |

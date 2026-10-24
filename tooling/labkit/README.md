@@ -100,10 +100,12 @@ not disposable.
   `same_chunk`, `window_ok`, response sizes and errors.
 
 `window_ok = 1` means the HashTable starts at or after the id value and ends
-within the readable window. It does not mean data leaked: that also requires the
-forged id to be the one the worker sends (the `id_len` in `RESET`) and the
-cookie to contain non-filler bytes. The published matrix shows cases with
-`window_ok=1` and no leak, and why.
+within the readable window. It does not mean session data leaked: that also
+requires the forged id to be the one the worker sends (the `id_len` in `RESET`)
+and the HashTable to actually be reached. Note the two channels are separate:
+the cookie over-reads past the forge filler and can disclose adjacent heap
+objects (in the published matrix: 47 pointer-like values per run, session table
+never reached); see `../validation/` for the corrected counts.
 
 ## Recalibrating
 

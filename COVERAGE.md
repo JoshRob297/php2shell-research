@@ -17,7 +17,7 @@ Status definitions:
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested here | offset-calibrated build; fixed branches not exercised in this profile |
 | RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
 | FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; with the multipart-reclaimed struct, controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab | not tested | not tested | CVE-2026-109619; default mechanism = allocator free-list encoding over `used_slots`; controlled variant = fake `var_dtor_entries` (ASLR off, planted 24-byte session); 8.4.27 stable (early reset) |
-| Memory disclosure via cookie | not tested | partial (4000-byte cookie; code leak blocked under ASLR on) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
+| Memory disclosure via cookie | not tested | partial (4000-byte cookie discloses heap pointers; session table not reachable; libphp narrowed ~1.66 MB, not pinned) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
 
 Fixed branches 8.3.36 and 8.2.35 (same harness, 3 runs each): 0/3, blocked at stage 1 (heap
 leak). Raw: `raw/fixed-branches-verify.txt`.
