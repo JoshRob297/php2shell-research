@@ -107,6 +107,9 @@ or local conditions.
 | `raw/` | Redacted raw lab captures backing the OOM/ASLR rows |
 | `LICENSE` | License notice for this text |
 
+PDF versions of `REPORT.md` and `RESUMEN.md` (plus `SHA256SUMS`) are attached to the
+[v1.0.0 release](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0).
+
 The `tooling/` and `detection/` directories complement the ecosystem's scanners
 and rule sets rather than replacing them: they encode the configuration,
 geometry and artifact findings of this report (default limits, allocation order,
