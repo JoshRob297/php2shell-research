@@ -426,6 +426,11 @@ Findings:
    disclosure does not deterministically defeat ASLR for code pointers.
 4. **`pd_dummy` shows the contrast.** Its destructor test overwrites the
    over-read region with zeros: 3000 NUL bytes and no pointers.
+5. **Single-shot per OOM, no entropy accumulation.** A second forged request
+   without a new OOM returns a 32-byte cookie (stale id gone). With a new OOM
+   per cycle the leak repeats, but both cycles hit the same chunk, page and
+   delta (6656448 in the measured pair), so the channel does not accumulate
+   independent heap addresses.
 
 An earlier revision of this document said the channel leaked zero bytes. That
 was true only of the `pd_dummy` replication and was generalised by mistake; the

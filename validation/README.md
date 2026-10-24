@@ -88,6 +88,13 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    every stored `*.b.resp` and are reproducible with the script in
    `evidence/` of the private audit repository.
 
+7. **The channel is single-shot per OOM and does not accumulate entropy.** A
+   second forged request without a new OOM returns a normal 32-byte cookie (the
+   stale id is gone). Repeating A -> B with a new OOM per leak is possible, but
+   the worker reuses the same id chunk: two consecutive cycles produced the same
+   chunk, page and delta. Sampling different chunks requires restarting the
+   worker, which is how the 20-run distribution was collected.
+
 ## Reproducing the matrix
 
 `tooling/labkit/` contains the instrumentation: the gdb probe, the payload
