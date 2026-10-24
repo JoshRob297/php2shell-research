@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 
 KIT_DIR = Path(__file__).resolve().parent
-CONTAINER = os.environ.get('P2S_CONTAINER', 'p2s-lab')
+CONTAINER = os.environ.get('P2S_CONTAINER', 'php2shell-lab')
 URL = os.environ.get('P2S_URL', 'http://127.0.0.1:18080/index.php')
 A_SCRIPT = os.environ.get('P2S_A', str(KIT_DIR / 'make_payload_a.py'))
 WARMUP = os.environ.get('P2S_WARMUP', str(KIT_DIR / 'warmup.py'))

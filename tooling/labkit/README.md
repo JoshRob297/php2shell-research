@@ -72,18 +72,18 @@ The 8M limit is a deliberate calibration override. With the PHP defaults
 
 ```bash
 # 1. Check the container first.
-./check_build.sh p2s-lab
+./check_build.sh php2shell-lab
 
 # 2. One calibrated point (matches the `base_off` row in validation/).
 python3 sweep.py \
-    --container p2s-lab \
+    --container php2shell-lab \
     --url http://127.0.0.1:18080/index.php \
     --outdir out \
     --label base_off \
     --warmup 1500000 --S 63 --NB 235 --BL 15000 --X 208 --K 4 --KL 4000
 
 # 3. A small grid (warm-up x S x X), if you want to map the neighbourhood.
-python3 sweep.py --container p2s-lab --url http://127.0.0.1:18080/index.php \
+python3 sweep.py --container php2shell-lab --url http://127.0.0.1:18080/index.php \
     --outdir out --grid --K 4 --KL 4000
 ```
 
