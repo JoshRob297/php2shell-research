@@ -61,20 +61,21 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
 5. **The forged-cookie channel discloses heap memory, but not the session
    HashTable.** The over-read starts at the forged header and continues past the
    1000-byte BF filler region, so it copies whatever follows it. In the 8M rows
-   with a successful forge the decoded cookie carries 621-841 bytes outside the
-   session alphabet, including **47 pointer-like values at 64-byte intervals
+   with a successful forge the decoded cookie carries 525-841 bytes outside the
+   session alphabet (range across runs), including **47 pointer-like values at 64-byte intervals
    starting at offset 1000** (e.g. `0x...e400`, `+0x80`, `+0x40`, ...). These
    are heap addresses inside the id's 2 MiB chunk, so the chunk base is
    recoverable by masking. `pd_dummy` is the exception (no pointers): its object
    layout overwrites the over-read region with zeros.
 
-6. **The leak narrows libphp, it does not pin it.** For the seven ASLR-on runs
-   with pointers, the distance from the chunk base to libphp text (the
-   `php_session_reset_id` breakpoint address) ranged from `0x28dec00` to
-   `0x2a86c00` (about 1.66 MB). The offset is not constant, so the disclosure
-   does not deterministically defeat ASLR for libphp; it reduces the target to a
-   ~1.7 MB window. Whether that window is usable depends on the build and on
-   other primitives, and was not demonstrated.
+6. **The leak narrows libphp, it does not pin it.** In a 20-run follow-up on the
+   same point, the distance from the chunk base to libphp text (the
+   `php_session_reset_id` breakpoint address) ranged from `0x289bc00` to
+   `0x2a7dc00` (1.88 MB), with 19 distinct values and the low 12 bits constant
+   (`delta % 0x1000 == 0xc00`). The page offset is therefore fixed and the
+   unknown is the page index (~481 pages). The disclosure does not
+   deterministically defeat ASLR for libphp; whether the window is usable
+   depends on the build and on other primitives, and was not demonstrated.
 
    Correction: an earlier version of this file and of the matrix said the
    cookie leaked zero bytes. That was measured on the `pd_dummy` replication

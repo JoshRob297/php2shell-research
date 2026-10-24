@@ -415,9 +415,11 @@ Findings:
    forged filler region and returns 47 pointer-like values at 64-byte intervals
    from offset 1000, all inside the id's 2 MiB chunk. The chunk base is
    recoverable by masking.
-3. **libphp is narrowed, not pinned.** The chunk-base-to-libphp distance varied
-   between `0x28dec00` and `0x2a86c00` (~1.66 MB) across seven ASLR-on runs, so
-   the disclosure does not deterministically defeat ASLR for code pointers.
+3. **libphp is narrowed, not pinned.** Across 20 ASLR-on runs the
+   chunk-base-to-libphp distance ranged from `0x289bc00` to `0x2a7dc00`
+   (1.88 MB) with the low 12 bits constant (`delta % 0x1000 == 0xc00`): the
+   page offset is fixed and only the page index (~481 pages) is unknown. The
+   disclosure does not deterministically defeat ASLR for code pointers.
 4. **`pd_dummy` shows the contrast.** Its destructor test overwrites the
    over-read region with zeros: 3000 NUL bytes and no pointers.
 
