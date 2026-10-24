@@ -99,6 +99,16 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    follow-up request runs in a new process, gets a fresh 32-byte session id and
    never sees the stale one. The leak and the FPM chain E cannot be combined in
    one worker: the leak needs the process to survive the OOM, and FPM does not.
+9. **The leak and the stale-`BG(unserialize)` primitive are mutually exclusive.**
+   On `mod_php` the E primitive does exist in isolation: after a decode OOM,
+   `BG(unserialize)` stays at `level=1` with a dangling `data` pointer, and the
+   next decode reuses it (`INIT level=1`), without a crash because the writes
+   land in mapped heap. But payload A's OOM in `php_session_send_cookie` clears
+   that state (`level=0`), and the producer that sets it leaves no stale session
+   id. In one request the decode runs before the cookie is sent, so a single
+   request cannot produce both; in separate requests each one destroys the
+   other's state. Combining the leak with chain E is therefore not possible in
+   one worker.
 
 ## Reproducing the matrix
 

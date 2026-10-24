@@ -436,6 +436,15 @@ Findings:
    502), the next request lands in a new process with a fresh 32-byte id, and no
    4000-byte cookie appears. The leak cannot be combined with the FPM chain E in
    the same worker.
+7. **Leak and stale `BG(unserialize)` are mutually exclusive.** On `mod_php` the
+   E primitive exists in isolation: a decode OOM leaves `BG(unserialize)` at
+   `level=1` with a dangling `data` pointer, and the next decode reuses it
+   (`INIT level=1`), without a crash (the writes land in mapped heap). But
+   payload A's OOM in `php_session_send_cookie` clears that state (`level=0`),
+   and the producer that sets it leaves no stale id. The decode runs before the
+   cookie is sent, so one request cannot produce both states, and in separate
+   requests each destroys the other's. The leak plus chain E combination is not
+   achievable in one worker.
 
 An earlier revision of this document said the channel leaked zero bytes. That
 was true only of the `pd_dummy` replication and was generalised by mistake; the
