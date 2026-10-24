@@ -450,3 +450,40 @@ An earlier revision of this document said the channel leaked zero bytes. That
 was true only of the `pd_dummy` replication and was generalised by mistake; the
 counts above were recomputed from every stored `*.b.resp`.
 
+## 12. Phase 3: `post_max_size` is not enforced on chunked bodies
+
+Independent verification of the chain-D precondition claimed by
+`ikow/php2shell-poc` ("post_max_size is bypassed when Content-Length is absent").
+Setup: `phpdebug:official` 8.4.26 `mod_php`, 1 prefork worker, stock defaults
+profile (`memory_limit=128M`, `post_max_size=8M`, `upload_max_filesize=2M`,
+`display_errors=Off`), endpoint `postdump.php` echoing `count($_POST)` and peak
+memory. Bodies: 300 form fields x 100 KB (30,022,117 B) and 700 x 100 KB
+(70,051,717 B), sent with and without `Content-Length`.
+
+| Test | Body | Result |
+|---|---|---|
+| Content-Length 30M | 300 fields | 200, `npost=0`, `PHP Warning: POST Content-Length of 30022117 bytes exceeds the limit of 8388608 bytes in Unknown on line 0` |
+| chunked 30M | 300 fields | 200, `npost=300`, `peak=61950792` — full parse, no limit warning |
+| chunked 70M | 700 fields | 500, `PHP Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 102400 bytes) in Unknown on line 0` |
+| Content-Length 70M | 700 fields | 200, `npost=0` (aborts at 8M) |
+
+Findings:
+
+1. **The bypass is real.** With `Transfer-Encoding: chunked` PHP never enforces
+   `post_max_size`; the limit is only checked against a present
+   `Content-Length`. The only ceilings are `memory_limit` and any front-end
+   body cap.
+2. **The OOM primitive is reachable at stock defaults.** A chunked ~64 MB+
+   multipart exhausts the default 128M limit during request startup
+   (footprint `~ 2*body + 1 MB`); the "Unknown on line 0" signature matches the
+   chain-D precondition. The worker survives the startup OOM (same pid before
+   and after).
+3. **The published payloads remain ineffective at defaults.** A 3.7M body does
+   not OOM, and any body sent with a `Content-Length` is capped at 8M; the
+   chunked route needs a large upload that front proxies typically cap (nginx
+   `client_max_body_size` defaults to 1M and applies to chunked; Apache
+   `LimitRequestBody` defaults to unlimited).
+
+Raw: `raw/chunked-postmax-matrix.txt` (private audit repo `evidence/fase7-chunked/`).
+
+

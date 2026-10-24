@@ -2,11 +2,19 @@
 
 ## Is upgrading to 8.4.27 enough?
 
-For the OOM/state-corruption CVEs (CVE-2026-109618 / CVE-2026-109619): yes, in our control
-tests. For the request-level A/C/E chains grouped under the same name: no. Those require
-configuration and application controls (`session.use_strict_mode=1`, disabling or locking down
-upload progress, removing LFI sinks, avoiding per-directory serializer mismatches). See
-`REMEDIATION.md`.
+For the OOM/state-corruption class (the two CVEs), yes: 8.4.27 resets the stale state early and
+our control runs show no aborts or over-read. It is not enough for the request-level A/C/E
+chains, which need application/configuration controls, and it does not cover CVE-2026-115560
+(mitigation: `session.upload_progress.enabled=0` until the next regular release).
+
+## Does `post_max_size` stop the OOM primitive at stock defaults?
+
+Only for bodies sent with a `Content-Length`. Measured on 8.4.26 `mod_php` with defaults
+(`memory_limit=128M`, `post_max_size=8M`): a chunked 30M multipart parses in full and a chunked
+70M multipart OOMs at request startup, while the same bodies with a `Content-Length` abort at
+8M. With chunked transfer encoding the ceilings are `memory_limit` and any front-end body cap
+(nginx `client_max_body_size` applies to chunked; Apache `LimitRequestBody` defaults to
+unlimited). The published ~3.7M payloads still do not OOM at defaults.
 
 ## Does `session.use_strict_mode=1` fix chain A?
 

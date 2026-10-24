@@ -40,11 +40,16 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
 
 ## Conclusions
 
-1. **Stock defaults stop the primitive.** With `memory_limit=128M` and
-   `post_max_size=8M`, request A returns a clean 200 and never aborts, so no
-   stale id exists for request B to reuse. The same holds at 32M with the same
-   body. The OOM primitive is conditional on a lowered `memory_limit` or a
-   raised `post_max_size` (see `tooling/oom_reach.py`).
+1. **Stock defaults stop the published payloads, not the primitive.** With
+   `memory_limit=128M` and `post_max_size=8M`, request A (the ~3.7M published
+   payload) returns a clean 200 and never aborts, so no stale id exists for
+   request B to reuse — for any body sent with a `Content-Length`. But
+   `post_max_size` is **not enforced on chunked bodies** (measured: a chunked
+   30M multipart parses in full, a chunked 70M multipart OOMs at request
+   startup on the 128M limit, worker survives; `EVIDENCE.md` section 12). The
+   OOM primitive is therefore reachable at stock defaults with a ~64M+ chunked
+   multipart unless a front-end body cap exists. The published payload sizes
+   remain ineffective against defaults.
 2. **No forward-window geometry under the 8M lab profile.** In every 8M run the
    session `HashTable` lands in a different 2 MiB chunk, several megabytes away
    from the id, or up to 4552 B *before* it. The cookie window only reads

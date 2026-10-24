@@ -42,10 +42,20 @@ chain: the request-level A/C/E chains described by public PoCs still worked agai
 the fixed-session variant of chain A in our tests; the other chains require application-level
 or local conditions.
 
-### Critical Real-World Boundaries (October 23 Update)
+### Critical Real-World Boundaries (October 24 Update)
 
-1. **Default PHP Resource Limits Disprove Universal Exploitability:**
-   Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`. In our re-runs against vanilla defaults, standard multipart payloads (~3.7 MB) **do not trigger an Out-Of-Memory (OOM) bailout** (yielding a clean HTTP 200). Without the OOM failure inside `php_session_send_cookie()`, stale pointer creation is bypassed completely. The chain is strictly conditional on non-default overrides (such as the lab's `8M` or `32M` limits).
+1. **Default limits stop the published payloads, but not the primitive.**
+   Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`.
+   In re-runs against vanilla defaults, the published multipart payloads (~3.7 MB) **do not
+   trigger an Out-Of-Memory (OOM) bailout** (clean HTTP 200), and any body sent with a
+   `Content-Length` is capped at `post_max_size`. However, **`post_max_size` is not enforced on
+   chunked bodies**: we independently confirmed (8.4.26 `mod_php`, defaults profile) that a
+   chunked multipart of 30 MB parses in full (300 fields, peak 61.9 MB) and a chunked 70 MB
+   multipart exhausts the 128 MB `memory_limit` during request startup
+   (`Fatal error: ... in Unknown on line 0`; the worker survives). The published payloads are
+   therefore ineffective against defaults, but the OOM primitive itself **is reachable at stock
+   defaults** through a ~64 MB+ chunked multipart, unless a front-end proxy/WAF caps request
+   bodies. See `EVIDENCE.md` section 12.
 
 2. **The Session HashTable Is Out of the Cookie Window, but the Channel Leaks Heap:**
    Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.

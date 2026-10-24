@@ -149,11 +149,16 @@ Decision order:
    python3 tooling/oom_reach.py -m 128M -p 8M
    ```
 
-   With stock defaults the verdict is `UNREACHABLE`: the largest body a client
-   can submit is bounded by `post_max_size` (8 MiB) and the resulting request
-   footprint (~17 MiB) is far below `memory_limit` (128 MiB). A report that
-   claims a remote, unauthenticated OOM against such a host needs an
-   explanation of where the extra ~110 MiB comes from.
+   With stock defaults the verdict for `Content-Length` bodies is
+   `UNREACHABLE`: the largest body a client can submit with a declared length
+   is bounded by `post_max_size` (8 MiB) and the resulting request footprint
+   (~17 MiB) is far below `memory_limit` (128 MiB). **Chunked bodies are not
+   bounded by `post_max_size`** (measured, `EVIDENCE.md` section 12): a chunked
+   ~64 MB+ multipart reaches the OOM at stock defaults. A report that claims a
+   remote, unauthenticated OOM against a default host needs to say whether the
+   body arrived chunked and whether a front-end proxy/WAF capped it (nginx
+   `client_max_body_size` defaults to 1M and applies to chunked; Apache
+   `LimitRequestBody` defaults to unlimited).
 4. **Leak channel.** `display_errors=Off` removes the `libphp` address leak.
    With ASLR on and no in-band leak, the measured outcome is a worker abort
    (DoS), not RCE; see `validation/` for the geometry.

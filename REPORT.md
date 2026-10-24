@@ -182,6 +182,19 @@ and Apache replaces it. By saturating the worker pool and streaming request bodi
 increases the chance that a later request lands on a worker that still contains corrupted state.
 In the lab, N-1 saturation produced successful pairing with 4, 8 and 16 workers.
 
+**`post_max_size` is not a body ceiling for chunked requests.** Independently verified on
+8.4.26 `mod_php` with the defaults profile (`memory_limit=128M`, `post_max_size=8M`): a
+chunked multipart of 30 MB parses in full (`npost=300`, peak 61.9 MB) with no limit warning,
+while the same body with a `Content-Length` aborts at 8 MB
+(`POST Content-Length of 30022117 bytes exceeds the limit of 8388608 bytes`, `npost=0`). A
+chunked 70 MB multipart then triggers the request-startup OOM
+(`Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 102400
+bytes) in Unknown on line 0`, HTTP 500), and the `mod_php` worker survives. So with stock
+defaults the OOM primitive needs a ~64 MB+ chunked multipart (footprint ~ `2*body + 1 MB`),
+which is heavy but feasible wherever no front-end body cap exists (Apache's `LimitRequestBody`
+defaults to unlimited; nginx's `client_max_body_size` defaults to 1 MB and does apply to
+chunked bodies).
+
 ### 5.3 Memory disclosure and ASLR
 
 With `display_errors=On`, error output and malformed session handling provided enough
@@ -289,7 +302,9 @@ deployment is exploitable with the same PoC".
 
 Exploitability depends on the SAPI (`mod_php` prefork vs PHP-FPM), worker count,
 `session.upload_progress`, `memory_limit`/`post_max_size`, ASLR, allocator and kernel layout,
-build flags, and any proxy/WAF in front of PHP. The public ASLR-bypass PoC reproduced on one
+build flags, and any proxy/WAF in front of PHP. `post_max_size` only bounds bodies sent with a
+`Content-Length`; chunked bodies are capped by `memory_limit` and the front-end body limit
+instead (measured, section 5.2). The public ASLR-bypass PoC reproduced on one
 host and not on another. The A/C/E chains additionally need LFI, a per-directory serializer
 mismatch, or a local write, depending on the chain.
 

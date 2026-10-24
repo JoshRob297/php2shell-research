@@ -36,12 +36,16 @@ primitive only fires when `post_max_size` is raised to allow the large body.
 The OOM primitive that starts the public chains is not reachable without a
 configuration change (a lowered `memory_limit` or a raised `post_max_size`).
 
-Caveat: this model assumes `post_max_size` caps the request body. The
-`ikow/php2shell-poc` analysis claims (marked "verified" in their repo) that
-`post_max_size` can be bypassed with chunked request bodies. If that holds on
-a given SAPI/version, the effective body ceiling is `memory_limit` itself and
-the stock-defaults conclusion above must be re-evaluated for that target.
-This tool flags `BORDERLINE` in that case instead of asserting safety.
+Caveat: this model assumes `post_max_size` caps the request body. Measured on
+8.4.26 `mod_php` (2026-10-24): `post_max_size` is **not enforced on chunked
+transfer-encoded bodies** — a chunked 30M multipart parsed in full
+(`npost=300`, peak 61.9M) while the same body with `Content-Length` aborted at
+8M; a chunked 70M multipart OOM'd at request startup on the 128M limit
+(`... in Unknown on line 0`, worker survived). With chunked encoding the
+effective body ceiling is `memory_limit` itself plus any front-end body cap,
+so the stock-defaults conclusion above only holds for `Content-Length` bodies
+or for deployments with a proxy/WAF body cap. This tool flags `BORDERLINE`
+in that case instead of asserting safety.
 
 Usage
 -----

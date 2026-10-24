@@ -32,7 +32,10 @@ la petición de PHP, no en el código de Nextcloud.
 
 La explotabilidad no es universal: depende del SAPI (`mod_php` prefork vs PHP-FPM), cantidad de
 workers, `session.upload_progress`, `memory_limit`/`post_max_size`, ASLR, geometría del
-allocator y del kernel, flags de build y del proxy/WAF. Otras aplicaciones PHP con la misma
+allocator y del kernel, flags de build y del proxy/WAF. Nota medida: `post_max_size` solo aplica
+a cuerpos con `Content-Length`; con transferencia chunked no se aplica, y un multipart chunked
+de ~64 MB+ agota el `memory_limit` default (128M) en request startup (`EVIDENCE.md` seccion 12).
+Otras aplicaciones PHP con la misma
 configuración se esperan afectadas, pero no se probaron. No es correcto afirmar que cualquier
 instancia de PHP sea explotable con la misma PoC.
 
@@ -45,6 +48,7 @@ instancia de PHP sea explotable con la misma PoC.
 | 8.4.26, `display_errors=Off`, ASLR on | Cookie de 4000 B dependiente del estado; sin lectura de la tabla de sesion; se divulgan punteros de heap (ver `EVIDENCE.md` seccion 11) |
 | Filtracion de cookie en FPM | Sin canal: A mata al worker (`child ... exited with code 70`, 502) |
 | Combinacion leak + E-OOM en `mod_php` | Mutuamente excluyentes: A limpia el estado `BG(unserialize)` que E necesita; ruta cerrada |
+| `post_max_size` vs cuerpos chunked | Sin enforcement sin `Content-Length` (medido): chunked 30M parsea completo, chunked 70M agota los defaults en request startup (`EVIDENCE.md` seccion 12) |
 | 8.4.27 control | 0/5, sin abortos ni over-read |
 | A/C/E en 8.4.26 / 8.4.27 / 8.5.12 | RCE con la configuración del lab |
 | A con `use_only_cookies=1`, `strict=0`, SID solo en multipart | RCE en las tres versiones |
@@ -67,7 +71,10 @@ instancia de PHP sea explotable con la misma PoC.
 2. Verificar el parche con el control 8.4.27: sin `zend_mm_heap corrupted` ni abortos.
 3. Configurar `session.use_strict_mode=1` y `session.use_only_cookies=1`.
 4. Deshabilitar `session.upload_progress` si no se usa; si se usa, mantener `cleanup=On`.
-5. Mantener buffering/límites de cuerpo, WAF y rate limiting delante de PHP.
+5. Mantener buffering/límites de cuerpo, WAF y rate limiting delante de PHP. Con el bypass
+   chunked medido, el cap de cuerpo del proxy/WAF es la única barrera de tamaño en defaults
+   (nginx `client_max_body_size` aplica a chunked; Apache `LimitRequestBody` por defecto no
+   limita).
 6. Eliminar sinks LFI, mismatches de serializer por directorio y gadgets alcanzables.
 7. Monitorear OOM, abortos de worker, picos de 500 y `PHPSESSID` anómalos.
 8. Por CVE-2026-115560 (advisory informativo del 23-oct, sin fix en las versiones de

@@ -108,9 +108,10 @@ See `EVIDENCE.md` for the full matrices. The short version:
 - 8.4.26 `mod_php`, `display_errors=Off`, ASLR on: controlled repetitions 0/3; the 4000-byte cookie is state-dependent and over-reads into heap objects (47 pointer-like values per run); no session-table read, and the chunk-to-libphp distance varies 1.88 MB (fixed page offset, ~481 pages).
 - Chain D (mod_php stale EG + forged `zend_object` spray -> `zif_system`): described in
   `ikow/php2shell-poc` `docs/ANALYSIS.md` (sections 3.5/3.6); the exploit scripts were not
-  public at review time and we did not test it. The same repo claims a chunked-encoding bypass
-  of `post_max_size` (marked verified) which, if it holds, weakens the stock-defaults
-  conclusion of `tooling/oom_reach.py`; we have not reproduced it.
+  public at review time and we did not test it. Its OOM precondition — a chunked-encoding
+  bypass of `post_max_size` — **we independently confirmed** on 8.4.26 `mod_php` with stock
+  defaults (chunked 30M parses in full; chunked 70M OOMs at request startup; see
+  `EVIDENCE.md` section 12). The full chain D itself remains untested here.
 - Community backports for EOL PHP 5.4-8.1 exist (e.g. `Anton-Barinov/php2shell-patches`); they
   are third-party code we did not review for correctness.
 - 8.4.27: 0/5, no aborts or over-read.
