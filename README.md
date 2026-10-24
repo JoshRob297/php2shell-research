@@ -71,8 +71,17 @@ or local conditions.
 | `FAQ.md` | Common questions and scope clarifications |
 | `GLOSSARY.md` | Terms used in the report |
 | `REFERENCES.md` | Primary and secondary public sources |
+| `tooling/oom_reach.py` | Offline estimator: can a multipart body exhaust `memory_limit`? |
+| `tooling/forged_cookie_check.py` | Offline check for forged `PHPSESSID` artifacts in `Set-Cookie` values |
+| `detection/` | Additive Suricata and Sigma rules (forged cookie, groom signatures, abort bursts) |
+| `validation/` | Sanitized `PS(id)` vs HashTable matrix and its interpretation |
 | `raw/` | Redacted raw lab captures backing the OOM/ASLR rows |
 | `LICENSE` | License notice for this text |
+
+The `tooling/` and `detection/` directories complement the ecosystem's scanners
+and rule sets rather than replacing them: they encode the configuration,
+geometry and artifact findings of this report (default limits, allocation order,
+forged-cookie content) and are offline unless stated otherwise.
 
 ## Method
 

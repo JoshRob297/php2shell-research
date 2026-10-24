@@ -1,0 +1,80 @@
+# php2shell refined Sigma rules (additive)
+#
+# Complements the ecosystem's Sigma rule set (5 rules distributed separately).
+# These two rules encode artifacts measured in this project:
+#
+#   1. A forged PHPSESSID in a response: NUL bytes (percent-encoded or raw)
+#      or a value far longer than a genuine session id.
+#   2. A burst of heap-corruption worker aborts consistent with repeated
+#      OOM-primitive attempts.
+#
+# Field names for HTTP headers vary by log source (Nginx, HAProxy, Envoy,
+# Cloudflare, Zeek). Adapt `set_cookie` / `phpsessid` to your pipeline; the
+# detection logic is the part that matters.
+
+title: PHP2Shell Forged Session Cookie in Response
+id: 7c1f4a2e-9d3b-4f6a-8e2c-1b5d7a9c3e41
+status: experimental
+description: >
+  Detects a PHPSESSID value in a response that cannot be genuine: it contains
+  NUL bytes (freed heap memory copied into the cookie) or is far longer than
+  a session id. Correlate with worker aborts and 500/502 spikes.
+references:
+  - https://github.com/JoshRob297/php2shell-research
+  - https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp
+author: JoshRob
+date: 2026-10-23
+tags:
+  - attack.initial-access
+  - attack.t1190
+  - cve.2026-109619
+logsource:
+  category: proxy
+detection:
+  selection_nul_raw:
+    set_cookie|contains: '%00'
+  selection_nul_decoded:
+    set_cookie|contains: "\x00"
+  selection_long:
+    set_cookie|re: 'PHPSESSID=[^;\s]{128,}'
+  condition: 1 of selection_*
+falsepositives:
+  - Legitimate `session.sid_length` configured at 128 or above.
+  - Reverse proxies that percent-encode unrelated cookie bytes.
+level: critical
+
+---
+
+title: PHP2Shell Heap Corruption Worker Abort Burst
+id: 2e8b6d4a-5c7f-4a91-b3d8-9f0c2a7e6b15
+status: experimental
+description: >
+  Detects repeated PHP worker aborts consistent with OOM-primitive attempts
+  against the php2shell chain class. A single abort is noise; a burst on the
+  same host within minutes indicates an active attempt.
+references:
+  - https://github.com/JoshRob297/php2shell-research
+  - https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w
+author: JoshRob
+date: 2026-10-23
+tags:
+  - attack.impact
+  - attack.t1499
+  - cve.2026-109618
+logsource:
+  product: linux
+  service: apache
+detection:
+  selection_heap:
+    message|contains:
+      - 'zend_mm_heap corrupted'
+  selection_abort:
+    message|contains:
+      - 'exit signal Abort'
+      - 'exit signal Segmentation fault'
+  timeframe: 5m
+  condition: (selection_heap or selection_abort) | count() >= 3
+falsepositives:
+  - A genuinely broken extension or a corrupt opcache shared memory segment.
+  - Memory-pressure events unrelated to php2shell.
+level: high

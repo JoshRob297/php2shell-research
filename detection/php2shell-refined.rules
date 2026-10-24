@@ -1,0 +1,76 @@
+# php2shell refined detection rules (additive)
+#
+# Complements the upstream ruleset in this ecosystem (SIDs 2026100-2026116,
+# distributed separately; no SID overlaps). These rules encode artifacts
+# measured in this project's lab work:
+#
+#   2026120  response  forged PHPSESSID containing %00 (freed-heap content)
+#   2026121  response  forged/oversized PHPSESSID (>= 128 chars)
+#   2026122  request   heap-groom filler sequence from the analyzed chain
+#   2026123  request   bin-256 trimmer run from the analyzed chain
+#
+# Scope and caveats
+# -----------------
+# * 2026120 is the highest-confidence rule: a genuine session id never
+#   contains %00. The forged id produced by the measured chain is a 4000-byte
+#   value whose decoded form contains long runs of NUL bytes.
+# * 2026121 can fire on a legitimate `session.sid_length` >= 128. Treat it as
+#   suspicious and correlate with 2026120 and with worker aborts.
+# * 2026122/2026123 match the calibrated weaponized payloads, not every
+#   possible variant. They are useful to catch reuse of the analyzed chain
+#   and to build intelligence; an attacker who re-grooms with different
+#   filler lengths will evade them.
+# * Request-body inspection must be enabled (Suricata `request-body-limit`).
+#   Many WAF/proxy body limits are 64 KB and the chain pads past that window.
+#
+# Deploy: copy into the Suricata rules directory and add the file to
+# `rule-files` in suricata.yaml, then reload.
+#
+# References: REPORT.md, EVIDENCE.md (sections 2 and 11), REMEDIATION.md.
+
+# --- Response side ---------------------------------------------------------
+
+alert http $HOME_NET any -> $EXTERNAL_NET any ( \
+    msg:"PHP2SHELL forged PHPSESSID in response (NUL bytes, memory content)"; \
+    flow:established,to_client; \
+    http.header; content:"Set-Cookie"; nocase; \
+    content:"PHPSESSID="; nocase; \
+    pcre:"/Set-Cookie:[^\r\n]*PHPSESSID=[A-Za-z0-9%]*%00/i"; \
+    classtype:web-application-attack; \
+    sid:2026120; rev:1; \
+    metadata:cve CVE-2026-109619, affected_product PHP, \
+    created_at 2026_10_23, updated_at 2026_10_23; )
+
+alert http $HOME_NET any -> $EXTERNAL_NET any ( \
+    msg:"PHP2SHELL oversized PHPSESSID in response (forged id artifact)"; \
+    flow:established,to_client; \
+    http.header; content:"Set-Cookie"; nocase; \
+    content:"PHPSESSID="; nocase; \
+    pcre:"/Set-Cookie:[^\r\n]*PHPSESSID=[A-Za-z0-9%]{128,}/i"; \
+    classtype:web-application-attack; \
+    sid:2026121; rev:1; \
+    metadata:cve CVE-2026-109619, affected_product PHP, \
+    created_at 2026_10_23, updated_at 2026_10_23; )
+
+# --- Request side (weaponized grooming signatures) -------------------------
+
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL heap-groom filler sequence in multipart body (analyzed chain)"; \
+    flow:established,to_server; \
+    http.request_body; content:"name=\"f0000\""; \
+    content:"VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"; \
+    distance:0; within:200; \
+    classtype:web-application-attack; \
+    sid:2026122; rev:1; \
+    metadata:cve CVE-2026-109618, affected_product PHP, \
+    created_at 2026_10_23, updated_at 2026_10_23; )
+
+alert http $EXTERNAL_NET any -> $HOME_NET any ( \
+    msg:"PHP2SHELL bin-256 trimmer run in multipart body (analyzed chain)"; \
+    flow:established,to_server; \
+    http.request_body; \
+    content:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; \
+    classtype:web-application-attack; \
+    sid:2026123; rev:1; \
+    metadata:cve CVE-2026-109618, affected_product PHP, \
+    created_at 2026_10_23, updated_at 2026_10_23; )

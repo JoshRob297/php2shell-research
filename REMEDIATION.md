@@ -127,3 +127,42 @@ After patching and hardening, the expected results are:
   as proof that the OOM patch is effective, or their presence as proof that it failed.
 
 See `EVIDENCE.md` for the measurements behind these statements.
+
+## 8. Triage: is the OOM primitive reachable at all?
+
+Most public scanners answer "is this PHP version patched?". The more useful
+first question for a SOC is whether the OOM-driven chains can start on the
+observed configuration. They cannot without reaching `memory_limit` inside
+request startup.
+
+Decision order:
+
+1. **Version.** `php -v`. At or above 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12: the
+   vendor class is fixed. Stop for the OOM chains; continue only if you are
+   validating request-level chains (section 3).
+2. **`session.upload_progress.enabled`.** If `Off`, the primary vector for the
+   OOM chains is not reachable. Continue for inventory, not for scanning.
+3. **Resource limits.** Run `tooling/oom_reach.py` with the effective values:
+
+   ```bash
+   php -i | grep -E 'memory_limit|post_max_size|upload_max_filesize'
+   python3 tooling/oom_reach.py -m 128M -p 8M
+   ```
+
+   With stock defaults the verdict is `UNREACHABLE`: the largest body a client
+   can submit is bounded by `post_max_size` (8 MiB) and the resulting request
+   footprint (~17 MiB) is far below `memory_limit` (128 MiB). A report that
+   claims a remote, unauthenticated OOM against such a host needs an
+   explanation of where the extra ~110 MiB comes from.
+4. **Leak channel.** `display_errors=Off` removes the `libphp` address leak.
+   With ASLR on and no in-band leak, the measured outcome is a worker abort
+   (DoS), not RCE; see `validation/` for the geometry.
+5. **Detection.** If the configuration is reachable and you still must test,
+   prefer passive detection first: `detection/php2shell-refined.rules` flags the
+   forged-cookie artifact and abort bursts without sending a destructive probe.
+
+What this triage does **not** say: that a host with defaults is safe from every
+php2shell-labelled chain. Request-level chains that do not require an OOM
+(section 3) depend on application code and local conditions; assess them
+separately.
+
