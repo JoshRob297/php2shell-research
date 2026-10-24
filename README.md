@@ -3,7 +3,7 @@
 Independent verification and exploitation analysis of the PHP request-startup vulnerabilities
 known as **php2shell**. Prepared by **JoshRob**.
 
-- Status: final public report, 2026-10-22.
+- Status: final public report, 2026-10-23 (updated with Phase 2 allocator & default limits analysis).
 - Scope: PHP 8.4.x and adjacent branches, official PHP container images, public proof-of-concept
   code, and independent lab reproduction.
 - Application scope: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork)
@@ -34,6 +34,14 @@ chain: the request-level A/C/E chains described by public PoCs still worked agai
 8.5.12 in our lab when their prerequisites were present. `session.use_strict_mode=1` blocked
 the fixed-session variant of chain A in our tests; the other chains require application-level
 or local conditions.
+
+### Critical Real-World Boundaries (October 23 Update)
+
+1. **Default PHP Resource Limits Disprove Universal Exploitability:**
+   Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`. In our re-runs against vanilla defaults, standard multipart payloads (~3.7 MB) **do not trigger an Out-Of-Memory (OOM) bailout** (yielding a clean HTTP 200). Without the OOM failure inside `php_session_send_cookie()`, stale pointer creation is bypassed completely. The chain is strictly conditional on non-default overrides (such as the lab's `8M` or `32M` limits).
+
+2. **Phase 2 In-Band ASLR Leak Disproved under Realistic Hardening (`display_errors=Off`):**
+   Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB). Testing with custom destructor objects (`pDestructor`) further confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`. The 4000-byte forged cookie returns null bytes (`0x00`), yielding **zero bytes of leaked memory**.
 
 ## Key results
 

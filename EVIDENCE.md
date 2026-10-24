@@ -388,3 +388,17 @@ before the write (SEGV in `tmp_var` without hitting the watchpoint).
 
 Prerequisites measured in the lab: ASLR off, a locally planted session file, and a symbol build
 for address calibration. The remote ASLR-on variant was not demonstrated.
+
+## 11. Phase 2: In-band ASLR bypass audit (`PS(id)` vs Session HashTable)
+
+Measurements taken with live GDB probe (`php_session_reset_id`, `php_session_track_init`) on `phpdebug:official` (`php:8.4.26-apache`):
+
+| Probe Label | Config | A Resp | B Resp | `id` Page | `ht` Page | Delta | Leaked Bytes |
+|---|---|---|---|---|---|---|---|
+| `base128` | 128M / post 8M | 259 (Clean 200) | 259 | `0x78000` | `0x571c0` | -134720 | 0 (No stale ID) |
+| `sid31_128` | 128M / post 8M | 258 | 258 | `0x571c0` | `0x571f8` | +56 | 0 (Own 31B ID, not stale 4000B) |
+| `drain65_128` | 128M / post 8M | 259 | 259 | `0x7e000` | `0x7ce38` | -4552 | 0 |
+| `base_off` | 8M override | 211 (OOM abort) | 10227 (Cookie) | `0x78000` | `0x571c0` | -134720 | 0 (Negative window, HT precedes ID) |
+| `pd_dummy` | 8M + `__destruct` | 211 (OOM abort) | 10227 (Cookie) | `0x1fe000` | `0x571c0` | +4559296 | 0 (Different chunks; 3000 null bytes) |
+
+**Conclusion:** In-band address disclosure via `PS(id)` does not materialize under `display_errors=Off`. Under default limits (`128M/8M`), Request A completes cleanly without OOM bailout.
