@@ -72,3 +72,14 @@ Note: the forged-cookie heap leak of section 11 is `mod_php`-only. On FPM the OO
 the stale id also kills the worker (exit code 70, 502), so that leak channel does not exist
 there; and on `mod_php` the leak and the E-OOM state are mutually exclusive (payload A clears
 `BG(unserialize)`).
+
+## Is there a third CVE?
+
+Yes. On 2026-10-23 PHP published an informational advisory for CVE-2026-115560, a third issue
+in the session upload-progress feature. It is not fixed by the 2026-10-21 emergency releases;
+the fix lands in the next regular release. The condition is narrow: the application must set
+`session.serialize_handler` to `php_binary` or `php_serialize` in configuration and then switch
+it back to `php` at runtime with `ini_set()` before `session_start()`, with upload progress
+enabled. PHP describes it as an unlikely vector; no exploitation was reported as of
+2026-10-24. Until the fix ships, set `session.upload_progress.enabled=0`. Our test deployment
+does not meet the condition, and this report does not test it.

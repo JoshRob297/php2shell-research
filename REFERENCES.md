@@ -8,6 +8,14 @@
 - NVD CVE-2026-109618: https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-109618
 - NVD CVE-2026-109619: https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-109619
 - Openwall: https://www.openwall.com/lists/oss-security/2026/10/21/6
+- oss-sec, CVE-2026-115560 informational advisory:
+  https://seclists.org/oss-sec/2026/q4/359
+- The Register, third PHP2Shell bug:
+  https://www.theregister.com/security/2026/10/23/theres-a-third-php2shell-bug-but-it-wont-get-an-emergency-fix/
+- BleepingComputer, in-the-wild exploitation timeline:
+  https://www.bleepingcomputer.com/news/security/amazon-says-php2shell-exploitation-began-4-days-before-patches
+- Red Hat RHSB-2026-013 (CVE-2026-109618/109619/115560):
+  https://access.redhat.com/security/vulnerabilities/RHSB-2026-013
 - PHP Foundation: https://thephp.foundation/blog/2026/10/21/todays-php-security-release-and-how-were-strengthening-php-security/
 - PHP 8.4.27 NEWS: https://github.com/php/php-src/blob/PHP-8.4.27/NEWS
 - PR php-src #22113 (open): https://github.com/php/php-src/pull/22113

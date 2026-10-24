@@ -22,6 +22,13 @@ Two CVEs were assigned to a cluster of bugs in PHP request startup:
 - **CVE-2026-109618**: state corruption via bailout during request startup.
 - **CVE-2026-109619**: session decode OOM followed by stale global state.
 
+A third issue in the same feature, **CVE-2026-115560**, was disclosed on 2026-10-23 in an
+informational advisory. It is unfixed by the emergency releases and requires an unusual
+condition: the application configures `session.serialize_handler` as `php_binary` or
+`php_serialize` and then switches it back to `php` at runtime with `ini_set()` before
+`session_start()`. Mitigation: `session.upload_progress.enabled=0`. This report does not test
+it; the test deployment does not meet the condition.
+
 The vulnerabilities are pre-authentication and run before application code. In a vulnerable
 `mod_php` prefork deployment with session upload progress enabled and a sufficiently large
 request body, a remote attacker can corrupt worker state, disclose process memory, and in the
@@ -57,6 +64,7 @@ or local conditions.
 | PHP 8.4.26, `display_errors=Off`, ASLR on | 4000-byte cookie state-dependent; no session-table read; heap pointers disclosed (see `EVIDENCE.md` section 11) |
 | Cookie leak on FPM | No channel: payload A exits the worker (`child ... exited with code 70`, 502) |
 | Leak + E-OOM combination on `mod_php` | Mutually exclusive: A clears the `BG(unserialize)` state E needs; route closed |
+| CVE-2026-115560 (informational, 2026-10-23) | Not tested; unfixed by 8.4.27; condition (config `php_binary`/`php_serialize` + runtime `ini_set()` switch to `php`) not met in our deployment |
 | PHP 8.4.27 control | 0/5, no aborts or over-read |
 | A/C/E request-level chains, 8.4.26 / 8.4.27 / 8.5.12 | RCE with the lab configuration; see `EVIDENCE.md` |
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on 8.4.26 / 8.4.27 / 8.5.12 |

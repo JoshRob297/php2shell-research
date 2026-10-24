@@ -70,8 +70,16 @@ instancia de PHP sea explotable con la misma PoC.
 5. Mantener buffering/límites de cuerpo, WAF y rate limiting delante de PHP.
 6. Eliminar sinks LFI, mismatches de serializer por directorio y gadgets alcanzables.
 7. Monitorear OOM, abortos de worker, picos de 500 y `PHPSESSID` anómalos.
+8. Por CVE-2026-115560 (advisory informativo del 23-oct, sin fix en las versiones de
+   emergencia): `session.upload_progress.enabled=0` hasta el próximo release regular. La
+   condición (configurar `session.serialize_handler` en `php_binary`/`php_serialize` y cambiarlo
+   a `php` en runtime con `ini_set()` antes de `session_start()`) no se cumple en nuestro
+   despliegue.
 
-El parche 8.4.27 no reemplaza los controles de configuración y aplicación para A/C/E.
+El parche 8.4.27 no reemplaza los controles de configuración y aplicación para A/C/E. La
+explotación en la naturaleza es un hecho: Amazon reporta intentos desde el 17-oct (4 días antes
+del parche) y watchTowr observa explotación desde el 21-oct; PHP Foundation no tiene evidencia
+de explotación exitosa de las dos CVEs antes de la publicación.
 
 ## Límites
 

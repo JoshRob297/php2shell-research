@@ -57,6 +57,8 @@ Times are UTC, from public sources.
 | 2026-10-21 14:17 | NVD records both CVEs |
 | 2026-10-21 20:30 | One vendor reports no exploitation in its partner base |
 | 2026-10-22 | Independent lab reproduction and patch verification (this report) |
+| 2026-10-22 | Amazon Threat Intelligence: first exploitation attempts on 2026-10-17, four days before the patches (multiple PoC payloads, anonymization-network source IPs) |
+| 2026-10-23 | PHP publishes an informational advisory for a third issue, CVE-2026-115560 (same feature, narrow condition); fix deferred to the next regular release, mitigation `session.upload_progress.enabled=0` |
 
 The leak and the early images compressed the patch window. The release was originally planned
 for 2026-10-22 and was moved forward.
@@ -70,6 +72,16 @@ for 2026-10-22 and was moved forward.
 | 8.4.27 | Fixed (vendor) | Still work with lab prerequisites |
 | 8.5.12 | Fixed (0/3 with the lab OOM chain; blocked at the heap leak stage) | Still work with lab prerequisites |
 | 8.3.36 / 8.2.35 | Fixed (0/3 each with the lab OOM chain; blocked at the heap leak stage) | Not tested here |
+
+**CVE-2026-115560 (informational advisory, 2026-10-23)** is a third issue in the same session
+upload-progress feature, disclosed after the emergency release. It is **not fixed** by
+8.4.27/8.3.36/8.2.35/8.5.12; PHP defers the fix to the next regular release and recommends
+`session.upload_progress.enabled=0` until then. The condition is narrow: the application must
+configure `session.serialize_handler` as `php_binary` or `php_serialize` **and then switch it
+to `php` at runtime with `ini_set()` before `session_start()`**, with upload progress still
+enabled. PHP describes it as an unlikely vector; no exploitation was reported as of
+2026-10-24. This report did not test it, and our test deployment does not meet the condition
+(default `php` serializer, no runtime switch).
 
 The independent OOM/RCE reproduction used official `php:8.4.26-apache` and
 `php:8.4.27-apache` images, and the same harness was run against `php:8.5.12-apache`,
@@ -236,7 +248,10 @@ the same vulnerability and not all are remote:
 - **B — local `/proc/self/mem`.** Local primitive; not a remote chain.
 - **C — per-directory session handler mismatch.** One directory writes with `php_serialize`,
   another reads with `php`; a gadget's `__destruct` fires. This is an application-level
-  configuration/gadget issue; the 8.4.27 memory patch does not address it.
+  configuration/gadget issue; the 8.4.27 memory patch does not address it. Related but
+  distinct: **CVE-2026-115560** (informational, 2026-10-23) requires a runtime `ini_set()`
+  switch of `session.serialize_handler` back to `php` before `session_start()`; it is unfixed
+  as of the emergency release and mitigated by `session.upload_progress.enabled=0`.
 - **D and E-OOM — OOM/state chains.** The public D/E material includes verification scripts; the
   full exploits are not public in the reviewed repository. In our FPM lab, E-OOM produces more
   than the DoS. When the dangling `php_unserialize_data` is reclaimed by the multipart field
@@ -326,7 +341,9 @@ configuration and detection guidance in `REMEDIATION.md`. The short version:
 - upgrade and verify `php -v`;
 - set `session.use_strict_mode=1` and `session.use_only_cookies=1`;
 - disable `session.upload_progress` if the application does not need it, or keep
-  `session.upload_progress.cleanup=On`;
+  `session.upload_progress.cleanup=On`; PHP additionally recommends
+  `session.upload_progress.enabled=0` until the next regular release to cover
+  CVE-2026-115560 (the runtime `ini_set()` serializer-switch condition);
 - keep request-body buffering/limits and WAF rules in front of PHP;
 - remove LFI sinks, per-directory serializer mismatches and gadget classes from the reachable
   path;
