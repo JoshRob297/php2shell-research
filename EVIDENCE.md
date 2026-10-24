@@ -413,8 +413,12 @@ Findings:
    id. Under the 128M defaults no stale id exists at all: A returns a clean 200.
 2. **The forged cookie does disclose heap memory.** It over-reads past the
    forged filler region and returns 47 pointer-like values at 64-byte intervals
-   from offset 1000, all inside the id's 2 MiB chunk. The chunk base is
-   recoverable by masking.
+   from offset 1000, all inside the id's 2 MiB chunk. A gdb follow-up
+   (`identify_leak.gdb`) identified them as the Zend MM **bin-64 free-list
+   links**, carved out of a previous request's freed 4000-byte field buffer:
+   each 64-byte chunk starts with the next link and keeps the attacker's fill
+   byte in the rest. No live object, session data or code pointer is disclosed;
+   the chunk base is recoverable by masking.
 3. **libphp is narrowed, not pinned.** Across 20 ASLR-on runs the
    chunk-base-to-libphp distance ranged from `0x289bc00` to `0x2a7dc00`
    (1.88 MB) with the low 12 bits constant (`delta % 0x1000 == 0xc00`): the

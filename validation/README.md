@@ -62,11 +62,16 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    HashTable.** The over-read starts at the forged header and continues past the
    1000-byte BF filler region, so it copies whatever follows it. In the 8M rows
    with a successful forge the decoded cookie carries 525-841 bytes outside the
-   session alphabet (range across runs), including **47 pointer-like values at 64-byte intervals
-   starting at offset 1000** (e.g. `0x...e400`, `+0x80`, `+0x40`, ...). These
-   are heap addresses inside the id's 2 MiB chunk, so the chunk base is
-   recoverable by masking. `pd_dummy` is the exception (no pointers): its object
-   layout overwrites the over-read region with zeros.
+   session alphabet (range across runs), including **47 pointer-like values at
+   64-byte intervals starting at offset 1000** (e.g. `0x...e400`, `+0x80`,
+   `+0x40`, ...). These are heap addresses inside the id's 2 MiB chunk, so the
+   chunk base is recoverable by masking. A gdb follow-up identified them: they
+   are the **Zend MM bin-64 free-list links**, carved out of a previous
+   request's freed 4000-byte field buffer (the link qword overwrote the first 8
+   bytes of each 64-byte chunk; the rest still holds the attacker's fill byte).
+   No live object, session data or code pointer is disclosed. `pd_dummy` is the
+   exception (no pointers): its object layout overwrites the over-read region
+   with zeros.
 
 6. **The leak narrows libphp, it does not pin it.** In a 20-run follow-up on the
    same point, the distance from the chunk base to libphp text (the
