@@ -62,6 +62,19 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    only, which is exactly what `tooling/forged_cookie_check.py` flags as an
    artifact without content.
 
+## Reproducing the matrix
+
+`tooling/labkit/` contains the instrumentation: the gdb probe, the payload
+generators, the single-worker configuration and the sweep driver. One calibrated
+point (`base_off` geometry) is reproduced with:
+
+```bash
+cd tooling/labkit
+./check_build.sh <container>
+python3 sweep.py --container <container> --url http://127.0.0.1:18080/index.php \
+    --label base_off --warmup 1500000 --S 63 --NB 235 --BL 15000 --X 208 --K 4 --KL 4000
+```
+
 ## Evidence location
 
 The raw gdb logs and A/B responses for the committed rows are archived in the
