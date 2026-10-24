@@ -44,6 +44,10 @@ or local conditions.
    Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.
    The forged cookie does over-read past its own filler, however: the measured 4000/5000-byte values carry 525-841 bytes outside the session alphabet (range across runs), including **47 pointer-like values** inside the id's 2 MB chunk, which discloses the chunk base. The distance from that base to libphp text varied between `0x289bc00` and `0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant (`delta % 0x1000 == 0xc00`), so the leak **narrows libphp to a ~481-page window but does not pin it**. This is a heap-disclosure primitive, not the session-table read and not a demonstrated full ASLR bypass. See `validation/`.
 
+3. **The leak channel is `mod_php`-only.** On FPM, payload A makes the worker exit (pool logs `child ... exited with code 70`, nginx returns 502); the follow-up request runs in a new process with a fresh 32-byte id and never reuses the stale one.
+
+4. **The leak and the stale-`BG(unserialize)` primitive (E-OOM) are mutually exclusive**, which closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitive exists in isolation (a decode OOM leaves `BG(unserialize)` at `level=1` with a dangling `data` pointer and the next decode reuses it without a crash), but payload A's OOM in `php_session_send_cookie` clears exactly that state (`level=0`), and the decode-OOM producer leaves no stale session id. One request cannot produce both states (the decode runs before the cookie is sent); separate requests destroy each other's.
+
 ## Key results
 
 | Test | Result |
@@ -51,6 +55,8 @@ or local conditions.
 | PHP 8.4.26, `display_errors=On`, ASLR on | RCE 3/3 as `uid=33` |
 | PHP 8.4.26, `display_errors=Off`, ASLR off | RCE 3/3 as `uid=33` |
 | PHP 8.4.26, `display_errors=Off`, ASLR on | 4000-byte cookie state-dependent; no session-table read; heap pointers disclosed (see `EVIDENCE.md` section 11) |
+| Cookie leak on FPM | No channel: payload A exits the worker (`child ... exited with code 70`, 502) |
+| Leak + E-OOM combination on `mod_php` | Mutually exclusive: A clears the `BG(unserialize)` state E needs; route closed |
 | PHP 8.4.27 control | 0/5, no aborts or over-read |
 | A/C/E request-level chains, 8.4.26 / 8.4.27 / 8.5.12 | RCE with the lab configuration; see `EVIDENCE.md` |
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on 8.4.26 / 8.4.27 / 8.5.12 |

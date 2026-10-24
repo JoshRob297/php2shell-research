@@ -43,6 +43,8 @@ instancia de PHP sea explotable con la misma PoC.
 | 8.4.26, `display_errors=On`, ASLR on | RCE 3/3, `uid=33` |
 | 8.4.26, `display_errors=Off`, ASLR off | RCE 3/3, `uid=33` |
 | 8.4.26, `display_errors=Off`, ASLR on | Cookie de 4000 B dependiente del estado; sin lectura de la tabla de sesion; se divulgan punteros de heap (ver `EVIDENCE.md` seccion 11) |
+| Filtracion de cookie en FPM | Sin canal: A mata al worker (`child ... exited with code 70`, 502) |
+| Combinacion leak + E-OOM en `mod_php` | Mutuamente excluyentes: A limpia el estado `BG(unserialize)` que E necesita; ruta cerrada |
 | 8.4.27 control | 0/5, sin abortos ni over-read |
 | A/C/E en 8.4.26 / 8.4.27 / 8.5.12 | RCE con la configuración del lab |
 | A con `use_only_cookies=1`, `strict=0`, SID solo en multipart | RCE en las tres versiones |
@@ -74,8 +76,13 @@ El parche 8.4.27 no reemplaza los controles de configuración y aplicación para
 ## Límites
 
 - Todo se midió en laboratorio, en loopback, con imágenes oficiales; no se atacó producción.
-- El RCE con `display_errors=Off` y ASLR on quedó bloqueado por la geometría del allocator en el
-  build probado.
+- El RCE con `display_errors=Off` y ASLR on no se logro. El canal de la cookie filtra heap
+  (base del chunk del id, 47 punteros de free-list) pero nunca la tabla de sesion, y acota
+  `libphp` a una ventana de 1.88 MB sin fijarla. Es de un solo uso por OOM y solo existe en
+  `mod_php` (en FPM el OOM mata al worker). En `mod_php`, el leak y la primitiva de
+  `BG(unserialize)` colgante (E-OOM) son mutuamente excluyentes: A limpia el estado que E
+  necesita. Ambas vias quedaron probadas y cerradas; otro build o primitiva podria cambiar la
+  geometria.
 - Los resultados dependen del kernel y del allocator; la misma PoC pública no reproduce en todos
   los hosts.
 - La cadena FPM se reprodujo hasta el UAF (crash 502) y se midió su mecánica por defecto (el allocator recicla el run liberado como página de bin 16 y su linkage codificado sobreescribe `used_slots`): DoS determinista. La retractación previa cubría la lectura del bloque residual, no la variante controlada: con el struct reclamado por el buffer del multipart y el fake `var_dtor_entries`, la escritura de 16 B llega a `sapi_module.ub_write` = `&system` y ejecuta un comando. Ese RCE quedó en el lab con prerrequisitos locales (ASLR off, sesión plantada de 24 B, build con símbolos); la variante remota con ASLR on no se demostró.

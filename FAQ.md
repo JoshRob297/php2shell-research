@@ -67,3 +67,8 @@ buffer, a fake `var_dtor_entries` turns the destructor walk into a controlled 16
 Aimed at `sapi_module.ub_write` = `&system`, the script output executed a command
 (`uid=33(www-data)`). This required ASLR off, a locally planted 24-byte session file and a
 symbol build; the remote ASLR-on variant was not demonstrated.
+
+Note: the forged-cookie heap leak of section 11 is `mod_php`-only. On FPM the OOM that creates
+the stale id also kills the worker (exit code 70, 502), so that leak channel does not exist
+there; and on `mod_php` the leak and the E-OOM state are mutually exclusive (payload A clears
+`BG(unserialize)`).
