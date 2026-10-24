@@ -36,6 +36,13 @@ primitive only fires when `post_max_size` is raised to allow the large body.
 The OOM primitive that starts the public chains is not reachable without a
 configuration change (a lowered `memory_limit` or a raised `post_max_size`).
 
+Caveat: this model assumes `post_max_size` caps the request body. The
+`ikow/php2shell-poc` analysis claims (marked "verified" in their repo) that
+`post_max_size` can be bypassed with chunked request bodies. If that holds on
+a given SAPI/version, the effective body ceiling is `memory_limit` itself and
+the stock-defaults conclusion above must be re-evaluated for that target.
+This tool flags `BORDERLINE` in that case instead of asserting safety.
+
 Usage
 -----
     python3 oom_reach.py --memory-limit 128M --post-max-size 8M

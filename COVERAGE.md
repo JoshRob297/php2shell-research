@@ -32,6 +32,7 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 | A with `cleanup=On` + race | not tested | inconclusive (2 attempts) | not tested | requires LFI | not a formal guarantee |
 | B: local `/proc/self/mem` | n/a | n/a | n/a | no | local primitive |
 | C: per-directory handler mismatch + gadget | fail | fail | fail | application-level | one prefork child in the mod_php test |
+| D: mod_php stale EG + forged `zend_object` spray | not tested | not tested | not tested | remote per `ikow` analysis | exploit scripts not public (paywalled); separate route from the cookie leak and E-OOM; the "route closed" conclusions do not cover it |
 | D and E-OOM: OOM/state chains | public verification; E-OOM reached command execution in the lab with local prerequisites | public verification | not tested | D remote, E-OOM local in the harness | full D/E not public; the FPM controlled-write variant is in `EVIDENCE.md` section 10 |
 | `PS(serializer)` across requests | pass (no stale; per-dir mismatch + OOM abort: next request uses its own INI) | pass (no stale; same test) | not tested | n/a | FPM and mod_php |
 

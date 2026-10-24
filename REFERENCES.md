@@ -38,6 +38,9 @@
 
 - 9bie, ASLR-bypass exploit: https://github.com/9bie/php2shell-bypass-aslr-exp
 - ikow, five-chain research: https://github.com/ikow/php2shell-poc
+- ikow, chain/root-cause analysis: https://github.com/ikow/php2shell-poc/blob/main/docs/ANALYSIS.md
+- Anton-Barinov, community backports for PHP 5.4-8.1:
+  https://github.com/Anton-Barinov/php2shell-patches
 - GoldraK, A/C/E fork and scanner: https://github.com/GoldraK/php2shell-poc
 - dinosn, lab-assisted: https://github.com/dinosn/php-cve-2026-10961x-lab-poc
 - php2shellbt, scanner (false positive): https://github.com/pentestershell/php2shellbt

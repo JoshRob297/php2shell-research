@@ -219,7 +219,9 @@ Two follow-up experiments closed the remaining `Off` + ASLR-on route:
 
 Net: under `display_errors=Off` with ASLR on, neither the FPM path nor the `mod_php` path can
 combine a leak with the stale-`BG` write primitive; the `Off` + ASLR-off variant succeeded 3/3
-because it needs no leak.
+because it needs no leak. This closure covers the cookie-leak and E-OOM mechanisms this report
+measured; the reported chain D (stale executor globals + forged `zend_object` spray) is a
+separate route and was not tested here.
 
 ### 5.4 Code execution
 
@@ -246,6 +248,13 @@ the same vulnerability and not all are remote:
   window, including with `cleanup=On`; execution still requires a command primitive such as
   `sh</tmp/sess_<id>`. It is a post-exploitation write primitive, not an independent remote RCE.
 - **B — local `/proc/self/mem`.** Local primitive; not a remote chain.
+- **D — mod_php stale executor globals + forged `zend_object` spray.** Reported by the
+  `ikow/php2shell-poc` analysis as: a keep-alive warm-up request populates EG state, then a
+  single multipart POST with hundreds of ~100 KB fields trips the `rfc1867` OOM, and heap
+  shaping relies on fixed worker reuse; the sprayed forged `zend_object` reaches `zif_system`.
+  The exploit scripts were not public at review time (paywalled), and **we did not test this
+  chain**. It is a distinct route from the cookie-leak and E-OOM mechanisms this report
+  measured; the "route closed" conclusions below apply only to the mechanisms we tested.
 - **C — per-directory session handler mismatch.** One directory writes with `php_serialize`,
   another reads with `php`; a gadget's `__destruct` fires. This is an application-level
   configuration/gadget issue; the 8.4.27 memory patch does not address it. Related but
@@ -348,6 +357,10 @@ configuration and detection guidance in `REMEDIATION.md`. The short version:
 - remove LFI sinks, per-directory serializer mismatches and gadget classes from the reachable
   path;
 - monitor OOM/abort logs, worker restarts and anomalous `PHPSESSID` behavior.
+
+Note: `memory_limit=-1` disables the allocation-failure bailout entirely, which mechanically
+removes the OOM primitive (there is no limit to exhaust); it is not a general recommendation
+because it leaves request memory unbounded.
 
 The 8.4.27 patch fixes the OOM/state-corruption CVEs. It does not fix the request-level A/C/E
 chains; those require the application/configuration controls above.
