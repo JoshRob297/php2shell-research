@@ -94,6 +94,11 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    the worker reuses the same id chunk: two consecutive cycles produced the same
    chunk, page and delta. Sampling different chunks requires restarting the
    worker, which is how the 20-run distribution was collected.
+8. **The channel is `mod_php`-only.** On FPM the same payload A makes the worker
+   exit (pool logs `child ... exited with code 70`, nginx returns 502), so the
+   follow-up request runs in a new process, gets a fresh 32-byte session id and
+   never sees the stale one. The leak and the FPM chain E cannot be combined in
+   one worker: the leak needs the process to survive the OOM, and FPM does not.
 
 ## Reproducing the matrix
 

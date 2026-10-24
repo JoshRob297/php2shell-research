@@ -431,6 +431,11 @@ Findings:
    per cycle the leak repeats, but both cycles hit the same chunk, page and
    delta (6656448 in the measured pair), so the channel does not accumulate
    independent heap addresses.
+6. **`mod_php`-only channel.** Replicating the sequence on a single-worker FPM
+   pool: payload A exits the worker (`child ... exited with code 70`, nginx
+   502), the next request lands in a new process with a fresh 32-byte id, and no
+   4000-byte cookie appears. The leak cannot be combined with the FPM chain E in
+   the same worker.
 
 An earlier revision of this document said the channel leaked zero bytes. That
 was true only of the `pd_dummy` replication and was generalised by mistake; the
