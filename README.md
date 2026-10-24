@@ -44,18 +44,19 @@ or local conditions.
 
 ### Critical Real-World Boundaries (October 24 Update)
 
-1. **Default limits stop the published payloads, but not the primitive.**
+1. **Default limits stop the published payloads, and the chunked route is version-scoped.**
    Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`.
-   In re-runs against vanilla defaults, the published multipart payloads (~3.7 MB) **do not
-   trigger an Out-Of-Memory (OOM) bailout** (clean HTTP 200), and any body sent with a
-   `Content-Length` is capped at `post_max_size`. However, **`post_max_size` is not enforced on
-   chunked bodies**: we independently confirmed (8.4.26 `mod_php`, defaults profile) that a
-   chunked multipart of 30 MB parses in full (300 fields, peak 61.9 MB) and a chunked 70 MB
-   multipart exhausts the 128 MB `memory_limit` during request startup
-   (`Fatal error: ... in Unknown on line 0`; the worker survives). The published payloads are
-   therefore ineffective against defaults, but the OOM primitive itself **is reachable at stock
-   defaults** through a ~64 MB+ chunked multipart, unless a front-end proxy/WAF caps request
-   bodies. See `EVIDENCE.md` section 12.
+   In re-runs against vanilla defaults, the published multipart payloads (~3.7 MB) do not
+   trigger an Out-Of-Memory (OOM) bailout (clean HTTP 200), and any body sent with a
+   `Content-Length` is capped at `post_max_size`. On **unpatched** branches (8.2.34, 8.3.35,
+   8.4.26) `post_max_size` is not enforced on chunked bodies: a chunked 30 MB multipart parses
+   in full and a chunked 70 MB multipart OOMs at request startup. The **8.4.27/8.5.12 patch
+   closes this**: chunked bodies are bounded with `Actual POST length does not match
+   Content-Length, and exceeds 8388608 bytes`. The route is also `mod_php`-only: PHP-FPM needs
+   `CONTENT_LENGTH` (chunked bodies are not parsed) and nginx's body cap applies to chunked.
+   So the published payloads are ineffective against defaults, the chunked OOM works only on
+   unpatched `mod_php`, and no front-end body cap is the remaining exposure condition. See
+   `EVIDENCE.md` section 12.
 
 2. **The Session HashTable Is Out of the Cookie Window, but the Channel Leaks Heap:**
    Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.
@@ -74,7 +75,9 @@ or local conditions.
 | PHP 8.4.26, `display_errors=Off`, ASLR on | 4000-byte cookie state-dependent; no session-table read; heap pointers disclosed (see `EVIDENCE.md` section 11) |
 | Cookie leak on FPM | No channel: payload A exits the worker (`child ... exited with code 70`, 502) |
 | Leak + E-OOM combination on `mod_php` | Mutually exclusive: A clears the `BG(unserialize)` state E needs; route closed |
-| CVE-2026-115560 (informational, 2026-10-23) | Not tested; unfixed by 8.4.27; condition (config `php_binary`/`php_serialize` + runtime `ini_set()` switch to `php`) not met in our deployment |
+| CVE-2026-115560 (informational, 2026-10-23) | Bounded reproduction attempt: condition reproduced (decode failure) but no memory-safety symptom; not fixed by 8.4.27; condition not met in our deployment |
+| `post_max_size` vs chunked bodies | Not enforced on unpatched 8.2.34/8.3.35/8.4.26 (chunked 30M parses in full; chunked 70M OOMs at defaults); 8.4.27/8.5.12 enforce it; FPM does not parse chunked bodies (no `CONTENT_LENGTH`) |
+| Chain D (stale `EG` after startup OOM) | OOM reproduced; `EG(objects_store)` identical before and after the OOM at `php_request_shutdown`; no stale-EG crash observed; RCE step not reproduced |
 | PHP 8.4.27 control | 0/5, no aborts or over-read |
 | A/C/E request-level chains, 8.4.26 / 8.4.27 / 8.5.12 | RCE with the lab configuration; see `EVIDENCE.md` |
 | A with `use_only_cookies=1`, `strict=0`, SID only in multipart | RCE on 8.4.26 / 8.4.27 / 8.5.12 |

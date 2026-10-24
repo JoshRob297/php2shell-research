@@ -450,7 +450,7 @@ An earlier revision of this document said the channel leaked zero bytes. That
 was true only of the `pd_dummy` replication and was generalised by mistake; the
 counts above were recomputed from every stored `*.b.resp`.
 
-## 12. Phase 3: `post_max_size` is not enforced on chunked bodies
+## 12. Phase 3: chunked bodies and `post_max_size` (unpatched `mod_php`)
 
 Independent verification of the chain-D precondition claimed by
 `ikow/php2shell-poc` ("post_max_size is bypassed when Content-Length is absent").
@@ -469,21 +469,39 @@ memory. Bodies: 300 form fields x 100 KB (30,022,117 B) and 700 x 100 KB
 
 Findings:
 
-1. **The bypass is real.** With `Transfer-Encoding: chunked` PHP never enforces
-   `post_max_size`; the limit is only checked against a present
-   `Content-Length`. The only ceilings are `memory_limit` and any front-end
-   body cap.
-2. **The OOM primitive is reachable at stock defaults.** A chunked ~64 MB+
-   multipart exhausts the default 128M limit during request startup
-   (footprint `~ 2*body + 1 MB`); the "Unknown on line 0" signature matches the
-   chain-D precondition. The worker survives the startup OOM (same pid before
-   and after).
-3. **The published payloads remain ineffective at defaults.** A 3.7M body does
-   not OOM, and any body sent with a `Content-Length` is capped at 8M; the
-   chunked route needs a large upload that front proxies typically cap (nginx
-   `client_max_body_size` defaults to 1M and applies to chunked; Apache
-   `LimitRequestBody` defaults to unlimited).
+1. **The bypass is real, but version-scoped.** On 8.2.34, 8.3.35 and 8.4.26 `mod_php`, a
+   chunked body is not bounded by `post_max_size`; the 30M body parses in full and the 70M
+   body OOMs at request startup. On **8.4.27 and 8.5.12** the same chunked bodies are
+   rejected with `Actual POST length does not match Content-Length, and exceeds 8388608
+   bytes` (`npost=84`), so the emergency patch closes this route too.
+2. **The route is `mod_php`-only.** PHP-FPM does not parse a chunked body without a
+   `CONTENT_LENGTH` (`npost=0` with `fastcgi_request_buffering off`), and nginx's
+   `client_max_body_size` applies to chunked requests (413 at the default 1M). Apache's
+   `LimitRequestBody` defaults to unlimited.
+3. **The OOM primitive is reachable at stock defaults on unpatched `mod_php`** with a chunked
+   ~64 MB+ multipart (footprint `~ 2*body + 1 MB`); the worker survives the startup OOM.
+4. **The published payloads remain ineffective at defaults.** A 3.7M body does not OOM, and
+   any body sent with a `Content-Length` is capped at 8M.
+5. **The leak-specific OOM was not reproduced at defaults.** In a bounded sweep (700 fields,
+   value 90,000-99,000 B, plus tail-field corrections), every OOM point failed during parse
+   (`tried to allocate 98304 bytes`, the body read buffer) and the forged-cookie follow-up
+   always returned a normal 32-byte id with zero pointers. The send-cookie OOM that leaves
+   the stale id remains measured only with the 8M override.
+6. **`EG()` is consistent at shutdown after the OOM.** On the same worker, a gdb breakpoint at
+   `php_request_shutdown` logged identical `EG(objects_store)` (`top=1 size=1024 flh=-1`),
+   `vm_stack` and `current_execute_data` for a healthy request, the chunked-OOM request and
+   the following request. No stale-EG crash or dangling pointer was observed, so the
+   stale-EG step of chain D is not supported by our measurements; only its OOM precondition
+   is.
+7. **CVE-2026-115560: condition reproduced, no memory-safety symptom.** With
+   `serialize_handler=php_binary` in config and `ini_set(...,'php')` before `session_start()`,
+   a php_binary session file produces `Failed to decode session object. Session has been
+   destroyed` (including a session value holding an object); the worker stays healthy and no
+   crash or destructor effect appears. Inconclusive at this level; the full advisory is not
+   public.
 
-Raw: `raw/chunked-postmax-matrix.txt` (private audit repo `evidence/fase7-chunked/`).
+Raw: private audit repo `evidence/fase7-chunked/` (8.4.26 defaults) and
+`evidence/fase8-multisapi/` (version matrix 8.2.34/8.3.35/8.4.26/8.4.27/8.5.12, FPM/nginx,
+leak sweep at defaults, `EG()` at shutdown, CVE-2026-115560 attempt).
 
 

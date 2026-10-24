@@ -182,18 +182,18 @@ and Apache replaces it. By saturating the worker pool and streaming request bodi
 increases the chance that a later request lands on a worker that still contains corrupted state.
 In the lab, N-1 saturation produced successful pairing with 4, 8 and 16 workers.
 
-**`post_max_size` is not a body ceiling for chunked requests.** Independently verified on
-8.4.26 `mod_php` with the defaults profile (`memory_limit=128M`, `post_max_size=8M`): a
-chunked multipart of 30 MB parses in full (`npost=300`, peak 61.9 MB) with no limit warning,
-while the same body with a `Content-Length` aborts at 8 MB
-(`POST Content-Length of 30022117 bytes exceeds the limit of 8388608 bytes`, `npost=0`). A
-chunked 70 MB multipart then triggers the request-startup OOM
-(`Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 102400
-bytes) in Unknown on line 0`, HTTP 500), and the `mod_php` worker survives. So with stock
-defaults the OOM primitive needs a ~64 MB+ chunked multipart (footprint ~ `2*body + 1 MB`),
-which is heavy but feasible wherever no front-end body cap exists (Apache's `LimitRequestBody`
-defaults to unlimited; nginx's `client_max_body_size` defaults to 1 MB and does apply to
-chunked bodies).
+**`post_max_size` is not a body ceiling for chunked requests on unpatched branches.** Verified
+on `mod_php` with the defaults profile (`memory_limit=128M`, `post_max_size=8M`): a chunked
+multipart of 30 MB parses in full (`npost=300`, peak 61.9 MB) with no limit warning, while the
+same body with a `Content-Length` aborts at 8 MB. A chunked 70 MB multipart triggers the
+request-startup OOM (`Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to
+allocate 102400 bytes) in Unknown on line 0`, HTTP 500), and the `mod_php` worker survives.
+Version matrix: the bypass is present on 8.2.34, 8.3.35 and 8.4.26; **8.4.27 and 8.5.12 reject
+chunked bodies over the limit** (`Actual POST length does not match Content-Length, and exceeds
+8388608 bytes`), so the emergency patch closes this route too. The route is `mod_php`-only:
+PHP-FPM requires `CONTENT_LENGTH` and does not parse a chunked body (measured `npost=0` with
+`fastcgi_request_buffering off`), and nginx's `client_max_body_size` applies to chunked requests
+(413) while Apache's `LimitRequestBody` defaults to unlimited.
 
 ### 5.3 Memory disclosure and ASLR
 

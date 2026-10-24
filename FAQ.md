@@ -9,12 +9,13 @@ chains, which need application/configuration controls, and it does not cover CVE
 
 ## Does `post_max_size` stop the OOM primitive at stock defaults?
 
-Only for bodies sent with a `Content-Length`. Measured on 8.4.26 `mod_php` with defaults
-(`memory_limit=128M`, `post_max_size=8M`): a chunked 30M multipart parses in full and a chunked
-70M multipart OOMs at request startup, while the same bodies with a `Content-Length` abort at
-8M. With chunked transfer encoding the ceilings are `memory_limit` and any front-end body cap
-(nginx `client_max_body_size` applies to chunked; Apache `LimitRequestBody` defaults to
-unlimited). The published ~3.7M payloads still do not OOM at defaults.
+For any body sent with a `Content-Length`, yes. On **unpatched** `mod_php` (8.2.34, 8.3.35,
+8.4.26) a chunked multipart is not bounded: 30M parses in full and 70M OOMs at request startup
+with defaults (`memory_limit=128M`, `post_max_size=8M`). **8.4.27/8.5.12 reject chunked bodies
+over the limit** (`Actual POST length does not match Content-Length, and exceeds 8388608
+bytes`), so the patch closes this route too. PHP-FPM does not parse chunked bodies at all
+(no `CONTENT_LENGTH`), and nginx's `client_max_body_size` applies to chunked (413 at the
+default 1M). The published ~3.7M payloads still do not OOM at defaults.
 
 ## Does `session.use_strict_mode=1` fix chain A?
 
