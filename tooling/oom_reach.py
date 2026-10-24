@@ -25,10 +25,14 @@ Calibration points (measured, PHP 8.4.26, one worker, multipart A payload)
     128M          8M             3.7M     no OOM
     512M          512M           12M      no OOM
     512M          512M           480M     OOM
+    128M          512M           114M     OOM (500, empty body)
+    128M          512M           15M      no OOM (200)
 
 Consequence for stock configurations: with the PHP defaults
 (`memory_limit=128M`, `post_max_size=8M`) the largest body an attacker can
 submit is 8 MiB, so the reachable footprint is ~17 MiB, far below 128 MiB.
+The two 128M/512M rows were measured on 2026-10-24 and close the loop: the
+primitive only fires when `post_max_size` is raised to allow the large body.
 The OOM primitive that starts the public chains is not reachable without a
 configuration change (a lowered `memory_limit` or a raised `post_max_size`).
 

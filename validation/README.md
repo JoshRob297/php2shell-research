@@ -34,7 +34,8 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
 | `delta` | `ht_page - id_page`; positive means the HashTable is after the id |
 | `same_chunk` | 1 if both fall in the same 2 MiB chunk |
 | `a_resp_len`, `b_resp_len` | Raw HTTP response sizes |
-| `leak_bytes` | Non-alphabet bytes returned in the `Set-Cookie` value |
+| `leak_bytes` | Bytes outside the session alphabet `[A-Za-z0-9,-]` in the decoded `Set-Cookie` value |
+| `ptr_like` | Count of 8-byte little-endian values in the `0x7f...` (user-space mmap) range inside the decoded value |
 | `note` | Short interpretation |
 
 ## Conclusions
@@ -57,10 +58,29 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    HashTable still landed 4.56 MB away in a separate chunk, and the 4000-byte
    cookie decoded to 3000 NUL bytes with zero memory content. The id is
    assigned during `rfc1867_post_handler`, before any userland destructor runs.
-5. **`leak_bytes` is zero in all rows.** No run returned a single byte of
-   process memory in the cookie. The forged-length rows return filler and NULs
-   only, which is exactly what `tooling/forged_cookie_check.py` flags as an
-   artifact without content.
+5. **The forged-cookie channel discloses heap memory, but not the session
+   HashTable.** The over-read starts at the forged header and continues past the
+   1000-byte BF filler region, so it copies whatever follows it. In the 8M rows
+   with a successful forge the decoded cookie carries 621-841 bytes outside the
+   session alphabet, including **47 pointer-like values at 64-byte intervals
+   starting at offset 1000** (e.g. `0x...e400`, `+0x80`, `+0x40`, ...). These
+   are heap addresses inside the id's 2 MiB chunk, so the chunk base is
+   recoverable by masking. `pd_dummy` is the exception (no pointers): its object
+   layout overwrites the over-read region with zeros.
+
+6. **The leak narrows libphp, it does not pin it.** For the seven ASLR-on runs
+   with pointers, the distance from the chunk base to libphp text (the
+   `php_session_reset_id` breakpoint address) ranged from `0x28dec00` to
+   `0x2a86c00` (about 1.66 MB). The offset is not constant, so the disclosure
+   does not deterministically defeat ASLR for libphp; it reduces the target to a
+   ~1.7 MB window. Whether that window is usable depends on the build and on
+   other primitives, and was not demonstrated.
+
+   Correction: an earlier version of this file and of the matrix said the
+   cookie leaked zero bytes. That was measured on the `pd_dummy` replication
+   only and generalised by mistake. The byte counts above come from decoding
+   every stored `*.b.resp` and are reproducible with the script in
+   `evidence/` of the private audit repository.
 
 ## Reproducing the matrix
 

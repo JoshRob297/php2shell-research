@@ -1,17 +1,18 @@
-label,ini_profile,memory_limit,post_max_size,id_len,id_page,ht_page,delta,same_chunk,a_resp_len,b_resp_len,leak_bytes,note
-base128,default,128M,8M,32,0x78000,0x571c0,-134720,1,259,259,0,"A completes with 200; no OOM; no stale id; primitive does not start"
-base32,32M,32M,8M,32,0x78000,0x571c0,-134720,1,259,259,0,"A completes with 200; no OOM; no stale id"
-sid31_128,default+sid31,128M,8M,31,0x571c0,0x571f8,56,1,258,258,0,"B ht 56 B after its own 31 B id; id not attacker-controlled"
-drain65_128,default+drain65,128M,8M,32,0x7e000,0x7ce38,-4552,1,259,259,0,"ht 4552 B before the id; negative window"
-postfill384_128,default+postfill,128M,8M,32,0xcc000,0x57220,10006976,0,259,259,0,"ht 10.0 MB away in another chunk"
-order4_128,default+order4,128M,8M,32,0xce000,0xcce38,-4552,1,259,259,0,"ht 4552 B before the id; negative window"
-base_off,lab-8M,8M,64M,4000,0x1fe000,0x571c0,8753600,0,211,5469,0,"A aborts 211; B forges a 4000 B id; ht in main chunk, outside the 8168 B window"
-sid31,lab-8M+sid31,8M,64M,31,0x57268,0x571c0,-168,1,211,272,0,"id bin-56; ht 168 B before the id; forge read fails"
-drain65,lab-8M+drain65,8M,64M,5000,0x1fe000,0x7ce38,8908344,0,211,6909,0,"ht in main chunk"
-fill380,lab-8M+fill380,8M,64M,32,0x1fe000,0x7e1c0,6816192,0,211,259,0,"forge fails after 380 fillers"
-postfill384,lab-8M+postfill384,8M,64M,5000,0x1fe000,0x7e1c0,6816192,0,211,6555,0,"fillers after BF; ht in a main-chunk bin, outside the window"
-postfill138,lab-8M+postfill138,8M,64M,5000,0x1fe000,0x78e38,8891960,0,211,6861,0,"drain 138 before BF; 8 bin-56 blocks left"
-postfill146,lab-8M+postfill146,8M,64M,5000,0x1fe000,0x7a1c0,6799808,0,211,6861,0,"drain 146; 65 blocks left"
-order3,lab-8M+order3,8M,64M,32,0x1fe000,,,-,211,211,0,"fillers before BF; B itself OOMs"
-order4,lab-8M+order4,8M,64M,5000,0x1fe000,0x1c7380,10261376,0,211,6589,0,"BF+fillers+drain; carve lands in main"
-pd_dummy,lab-8M+destructor,8M,64M,32,0x1fe000,0x571c0,4559296,0,211,10227,0,"userland destructor test: ht 4.56 MB after the id in another chunk; cookie decodes to 3000 NUL bytes, zero memory content"
+label,ini_profile,memory_limit,post_max_size,id_len,id_page,ht_page,delta,same_chunk,a_resp_len,b_resp_len,leak_bytes,ptr_like,note
+base128,default,128M,8M,32,0x78000,0x571c0,-134720,1,259,259,0,0,A completes with 200; no OOM; no stale id; primitive does not start
+base32,32M,32M,8M,32,0x78000,0x571c0,-134720,1,259,259,0,0,A completes with 200; no OOM; no stale id
+sid31_128,default+sid31,128M,8M,31,0x571c0,0x571f8,56,1,258,258,0,0,B ht 56 B after its own 31 B id; id not attacker-controlled
+drain65_128,default+drain65,128M,8M,32,0x7e000,0x7ce38,-4552,1,259,259,0,0,ht 4552 B before the id; negative window
+postfill384_128,default+postfill,128M,8M,32,0xcc000,0x57220,10006976,0,259,259,0,0,ht 10.0 MB away in another chunk
+order4_128,default+order4,128M,8M,32,0xce000,0xcce38,-4552,1,259,259,0,0,ht 4552 B before the id; negative window
+base_off,lab-8M,8M,64M,4000,0x1fe000,0x571c0,8753600,0,211,5469,621,47,"A aborts 211; B forges a 4000 B id; ht in main chunk, outside the window; cookie over-reads past the BF filler and returns 47 pointers"
+sid31,lab-8M+sid31,8M,64M,31,0x57268,0x571c0,-168,1,211,272,7,0,id bin-56; ht 168 B before the id; 31 B cookie with a 7-byte binary tail
+drain65,lab-8M+drain65,8M,64M,5000,0x1fe000,0x7ce38,8908344,0,211,6909,841,47,ht in main chunk; cookie over-reads and returns 47 pointers
+fill380,lab-8M+fill380,8M,64M,32,0x1fe000,0x7e1c0,6816192,0,211,259,0,0,forge fails after 380 fillers; 32 B cookie
+postfill384,lab-8M+postfill384,8M,64M,5000,0x1fe000,0x7e1c0,6816192,0,211,6555,711,47,fillers after BF; ht in a main-chunk bin; cookie over-reads and returns 47 pointers
+postfill138,lab-8M+postfill138,8M,64M,5000,0x1fe000,0x78e38,8891960,0,211,6861,817,47,drain 138 before BF; 8 bin-56 blocks left; 47 pointers in the cookie
+postfill146,lab-8M+postfill146,8M,64M,5000,0x1fe000,0x7a1c0,6799808,0,211,6861,817,47,drain 146; 65 blocks left; 47 pointers in the cookie
+order3,lab-8M+order3,8M,64M,32,0x1fe000,,0,0,211,211,0,0,fillers before BF; B itself OOMs; no cookie
+order4,lab-8M+order4,8M,64M,5000,0x1fe000,0x1c7380,10261376,0,211,6589,685,47,BF+fillers+drain; carve lands in main; 47 pointers in the cookie
+pd_dummy,lab-8M+destructor,8M,64M,32,0x1fe000,0x571c0,4559296,0,211,10227,3000,0,"userland destructor: ht 4.56 MB after the id in another chunk; cookie is 1000 B filler + 3000 NUL, no pointers"
+base_on,lab-8M+On,8M,64M,4000,0x1fe000,0x571c0,8753600,0,364,6041,663,47,display_errors=On: same geometry as base_off; 47 pointers in the cookie

@@ -389,16 +389,39 @@ before the write (SEGV in `tmp_var` without hitting the watchpoint).
 Prerequisites measured in the lab: ASLR off, a locally planted session file, and a symbol build
 for address calibration. The remote ASLR-on variant was not demonstrated.
 
-## 11. Phase 2: In-band ASLR bypass audit (`PS(id)` vs Session HashTable)
+## 11. Phase 2: `PS(id)` vs Session HashTable (in-band channel audit)
 
-Measurements taken with live GDB probe (`php_session_reset_id`, `php_session_track_init`) on `phpdebug:official` (`php:8.4.26-apache`):
+Measurements taken with the live GDB probe (`php_session_reset_id`,
+`php_session_track_init`) on the reference debug build of 8.4.26. `leak bytes`
+counts bytes outside `[A-Za-z0-9,-]` in the decoded `Set-Cookie` value; `ptrs`
+counts 8-byte values in the `0x7f...` range inside it.
 
-| Probe Label | Config | A Resp | B Resp | `id` Page | `ht` Page | Delta | Leaked Bytes |
-|---|---|---|---|---|---|---|---|
-| `base128` | 128M / post 8M | 259 (Clean 200) | 259 | `0x78000` | `0x571c0` | -134720 | 0 (No stale ID) |
-| `sid31_128` | 128M / post 8M | 258 | 258 | `0x571c0` | `0x571f8` | +56 | 0 (Own 31B ID, not stale 4000B) |
-| `drain65_128` | 128M / post 8M | 259 | 259 | `0x7e000` | `0x7ce38` | -4552 | 0 |
-| `base_off` | 8M override | 211 (OOM abort) | 10227 (Cookie) | `0x78000` | `0x571c0` | -134720 | 0 (Negative window, HT precedes ID) |
-| `pd_dummy` | 8M + `__destruct` | 211 (OOM abort) | 10227 (Cookie) | `0x1fe000` | `0x571c0` | +4559296 | 0 (Different chunks; 3000 null bytes) |
+| Label | Config | A resp | B resp | `id` page | `ht` page | Delta | leak bytes | ptrs |
+|---|---|---|---|---|---|---|---|---|
+| `base128` | 128M / 8M | 259 (clean 200) | 259 | `0x78000` | `0x571c0` | -134720 | 0 | 0 |
+| `sid31_128` | 128M / 8M, sid_length 31 | 258 | 258 | `0x571c0` | `0x571f8` | +56 | 0 | 0 |
+| `drain65_128` | 128M / 8M | 259 | 259 | `0x7e000` | `0x7ce38` | -4552 | 0 | 0 |
+| `base_off` | 8M override, Off | 211 (OOM abort) | 5469 | `0x1fe000` | `0x571c0` | +8753600 | 621 | 47 |
+| `drain65` | 8M, Off | 211 | 6909 | `0x1fe000` | `0x7ce38` | +8908344 | 841 | 47 |
+| `pd_dummy` | 8M, Off, userland destructor | 211 | 10227 | `0x1fe000` | `0x571c0` | +4559296 | 3000 (all NUL) | 0 |
+| `base_on` | 8M, `display_errors=On` | 364 | 6041 | `0x1fe000` | `0x571c0` | +8753600 | 663 | 47 |
 
-**Conclusion:** In-band address disclosure via `PS(id)` does not materialize under `display_errors=Off`. Under default limits (`128M/8M`), Request A completes cleanly without OOM bailout.
+Findings:
+
+1. **The HashTable is never in the forward window.** Under 8M it lands in the
+   main chunk, 4.5-10.2 MB away, or (with `sid_length=31`) 168 B *before* the
+   id. Under the 128M defaults no stale id exists at all: A returns a clean 200.
+2. **The forged cookie does disclose heap memory.** It over-reads past the
+   forged filler region and returns 47 pointer-like values at 64-byte intervals
+   from offset 1000, all inside the id's 2 MiB chunk. The chunk base is
+   recoverable by masking.
+3. **libphp is narrowed, not pinned.** The chunk-base-to-libphp distance varied
+   between `0x28dec00` and `0x2a86c00` (~1.66 MB) across seven ASLR-on runs, so
+   the disclosure does not deterministically defeat ASLR for code pointers.
+4. **`pd_dummy` shows the contrast.** Its destructor test overwrites the
+   over-read region with zeros: 3000 NUL bytes and no pointers.
+
+An earlier revision of this document said the channel leaked zero bytes. That
+was true only of the `pd_dummy` replication and was generalised by mistake; the
+counts above were recomputed from every stored `*.b.resp`.
+
