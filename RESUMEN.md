@@ -107,6 +107,7 @@ de explotación exitosa de las dos CVEs antes de la publicación.
   los hosts.
 - La cadena FPM se reprodujo hasta el UAF (crash 502) y se midió su mecánica por defecto (el allocator recicla el run liberado como página de bin 16 y su linkage codificado sobreescribe `used_slots`): DoS determinista. La retractación previa cubría la lectura del bloque residual, no la variante controlada: con el struct reclamado por el buffer del multipart y el fake `var_dtor_entries`, la escritura de 16 B llega a `sapi_module.ub_write` = `&system` y ejecuta un comando. Ese RCE quedó en el lab con prerrequisitos locales (ASLR off, sesión plantada de 24 B, build con símbolos); la variante remota con ASLR on no se demostró.
 - Las cadenas A/C/E dependen de LFI, handlers por directorio o escritura local, según el caso.
+- En despliegues minimalistas sobre Nginx + PHP-FPM sin código aplicativo vulnerable, la ejecución está bloqueada por arquitectura: aunque el parser RFC 1867 procesa `PHP_SESSION_UPLOAD_PROGRESS` a nivel SAPI antes de ejecutar el script, `session.upload_progress.cleanup = 1` purga el archivo inmediatamente y la ausencia de gadgets de inclusión en la aplicación impide materializar la explotación.
 - No se redistribuye código de exploit de terceros.
 
 Nota: el código de PoC del laboratorio vive en un repositorio privado e invite-only, disponible

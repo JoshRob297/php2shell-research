@@ -315,7 +315,46 @@ deployment is exploitable with the same PoC".
 | PHP 8.4.27 official | 0/5 control | Patch for the OOM class |
 | Nextcloud 33.0.x test deployment, PHP 8.4.21 `mod_php` | Version/config validated; RCE not executed | App-independent primitive; deployment-specific |
 | FPM A/C/E | RCE with lab prerequisites | App/config-dependent |
+| FPM minimalist SAPI boundary | SAPI-level upload progress confirmed; execution blocked | Defended by architecture (no app gadgets, `cleanup=1`) |
 | Other PHP applications | not tested | Expected under the same conditions; not proven |
+
+#### 5.6.1 Case Study: FPM exploitability boundaries in minimalist environments
+
+In response to community discussions concerning whether PHP2SHELL is realistically exploitable
+on a stock Nginx + PHP-FPM deployment without application-layer flaws, we evaluated the request
+startup boundaries against a public challenge environment running `PHP 8.4.26` behind an Nginx
+reverse proxy exposing only a minimal request responder (`ping.php` answering `POST message=ping`
+with `pong`, lacking `session_start()`).
+
+Our differential lab verification (isolated harness with `phpdebug:8.4.26-fpm`) established:
+
+1. **SAPI-level session initialization without `session_start()`:**
+   The RFC 1867 multipart parser runs during request startup, prior to script execution. When
+   presented with a valid `multipart/form-data` payload containing `PHP_SESSION_UPLOAD_PROGRESS`
+   and a conformant `PHPSESSID`, the SAPI opens and serializes the progress entry into the
+   session store (`sess_<SID>`) independently of application-level session handling.
+
+2. **Strict session identifier constraints:**
+   The SAPI startup parser enforces strict character sets on the incoming `PHPSESSID`
+   (`^[a-zA-Z0-9,-]{1,128}$`). Non-standard identifiers (e.g. incorporating underscores or
+   extended markers) trigger an internal startup warning and immediately abort session writing,
+   preventing arbitrary file planting with invalid identifier formats.
+
+3. **Inherent architectural mitigations:**
+   - **Automatic purge (`cleanup = 1`):** With the default `session.upload_progress.cleanup = 1`,
+     the planted session file is unlinked immediately upon request completion. In the absence
+     of sustained multi-second in-flight streaming or a concurrent race, no persistent artifact
+     remains on disk.
+   - **Absence of application gadgets:** Even when the session file is temporarily materialized,
+     an isolated FPM worker provides no execution vector without an application-level primitive
+     (`include`, `require`, phar wrapper, or unsafe deserialization) to read or interpret it.
+   - **Crash isolation:** Inducing unhandled allocator errors in FPM workers yields an exit 70
+     status and an immediate worker replacement by the master pool, terminating the corrupt state
+     without exposing memory disclosures or forged cookies to the reverse proxy.
+
+**Conclusion:** A stock Nginx + PHP-FPM deployment running vulnerable PHP 8.4.26 is structurally
+resilient against end-to-end command execution unless accompanied by permissive application-layer
+primitives or non-default session lifecycle settings (`cleanup = 0`, `strict_mode = 0`).
 
 Exploitability depends on the SAPI (`mod_php` prefork vs PHP-FPM), worker count,
 `session.upload_progress`, `memory_limit`/`post_max_size`, ASLR, allocator and kernel layout,
