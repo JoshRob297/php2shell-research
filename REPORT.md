@@ -299,9 +299,9 @@ flowchart LR
 
     subgraph Core_Engine_Chains["Core Engine Memory Chains (CVE-2026-109618/19)"]
         OOM["Large Multipart Ingestion"] --> BAIL["Engine Bailout during Startup"]
-        BAIL --> FPM["PHP-FPM: Crash exit 70 / DoS"]
-        BAIL --> MOD["mod_php: Residual BG dangling pointer"]
-        MOD --> EOOM["E-OOM: Stale BG(unserialize) write to ub_write"]
+        BAIL --> MOD["mod_php prefork: Worker reuse & heap leak/corruption"]
+        BAIL --> FPM["PHP-FPM: Stale BG(unserialize) in surviving worker"]
+        FPM --> EOOM["E-OOM: Fake var_dtor_entries -> ub_write overwrite (or exit 70 crash)"]
     end
 ```
 
