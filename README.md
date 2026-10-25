@@ -12,6 +12,8 @@
 **An exhaustive memory-allocator & microarchitecture study by JoshRob**  
 *Independent verification of public ASLR bypass claims, chunked POST boundaries, and Zend MM free-list heap disclosure.*
 
+[English](README.md) · [Español](RESUMEN.md)
+
 ---
 </div>
 
@@ -101,26 +103,44 @@ This closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitiv
 
 ---
 
+## Defensive Tooling: php2shell-checker
+
+This repository provides **[`tooling/checker/`](tooling/checker/)**, an automated, strictly non-destructive diagnostic CLI designed for defensive operators to verify whether their PHP deployments meet the necessary conditions for request-startup exploitation:
+
+```bash
+# Verify posture against a local development endpoint
+python3 tooling/checker/checker.py --url http://127.0.0.1:8080/ --local --verbose
+
+# Run an authorized external audit exporting Markdown and JSON reports
+python3 tooling/checker/checker.py --url https://example.com/ping.php --authorized --json report.json --md report.md
+```
+
+- **Guarantees:** Maximum 3 standard HTTP requests, total payload under 10 KB, zero memory exhaustion (OOM), and zero heap manipulation.
+- **Honeypot-Resistant:** Employs [`anti_injection.py`](tooling/checker/anti_injection.py) regex sanitizers to neutralize indirect prompt injections in headers and cookies for AI-assisted workflows.
+- See the [Checker Documentation](tooling/checker/README.md) for usage, configuration, and scoring matrix details.
+
+---
+
 ## Repository contents
 
-| File | Contents |
+| Document / Asset | Description |
 |---|---|
-| `REPORT.md` | Full technical report: root cause, exploitation model, impact, limitations |
-| `RESUMEN.md` | Resumen ejecutivo en español |
-| `EVIDENCE.md` | Sanitized lab evidence, matrices and raw output excerpts (sections 1–12) |
-| `validation/` | Sanitized `PS(id)` vs HashTable matrix, allocator geometry and interpretation |
-| `tooling/` | `oom_reach.py`, `forged_cookie_check.py`, and instrumented labkit replica |
-| `detection/` | Additive Suricata 8 and Sigma rules (forged cookie, groom signatures, abort bursts) |
-| `raw/` | Redacted raw lab captures backing the OOM/ASLR rows |
-| `METHODOLOGY.md` | Lab setup, application scope, AI/subagent workflow and reproducibility |
-| `POCS.md` | Public PoCs reviewed and independent verification results |
-| `REMEDIATION.md` | Vendor patch, configuration hardening, detection and verification |
-| `tools/checker/` | Non-destructive diagnostic CLI for defensive posture validation |
-| `COVERAGE.md` | Test matrix by CVE, chain, version and status |
-| `FAQ.md` | Common questions and scope clarifications |
-| `GLOSSARY.md` | Terms used in the report |
-| `REFERENCES.md` | Primary and secondary public sources |
-| `LICENSE` | CC BY 4.0 license notice |
+| [`REPORT.md`](REPORT.md) | Full technical report: root cause, exploitation model, impact, limitations |
+| [`RESUMEN.md`](RESUMEN.md) | Resumen ejecutivo en español |
+| [`EVIDENCE.md`](EVIDENCE.md) | Sanitized lab evidence, matrices and raw output excerpts (sections 1–13) |
+| [`tooling/checker/`](tooling/checker/) | Safe, non-destructive diagnostic CLI with prompt-injection defense |
+| [`tooling/`](tooling/) | `oom_reach.py`, `forged_cookie_check.py`, and instrumented labkit replica |
+| [`validation/`](validation/) | Sanitized `PS(id)` vs HashTable matrix, allocator geometry and interpretation |
+| [`detection/`](detection/) | Additive Suricata 8 and Sigma rules (forged cookie, groom signatures, abort bursts) |
+| [`raw/`](raw/) | Redacted raw lab captures backing the OOM/ASLR rows |
+| [`METHODOLOGY.md`](METHODOLOGY.md) | Lab setup, application scope, AI/subagent workflow and reproducibility |
+| [`POCS.md`](POCS.md) | Public PoCs reviewed and independent verification results |
+| [`REMEDIATION.md`](REMEDIATION.md) | Vendor patch, configuration hardening, detection and verification |
+| [`COVERAGE.md`](COVERAGE.md) | Test matrix by CVE, chain, version and status |
+| [`FAQ.md`](FAQ.md) | Common questions and scope clarifications |
+| [`GLOSSARY.md`](GLOSSARY.md) | Terms used in the report |
+| [`REFERENCES.md`](REFERENCES.md) | Primary and secondary public sources |
+| [`LICENSE`](LICENSE) | CC BY 4.0 license notice |
 
 > [!TIP]
 > **Official Formatted PDF Release**: Formatted typography versions of `REPORT.md` (13 pages, A4) and `RESUMEN.md` (4 pages, A4) with verified checksums are available on the [v1.0.0 Release Page](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0).
