@@ -354,7 +354,7 @@ deployment is exploitable with the same PoC".
 | PHP 8.4.27 official | 0/5 control | Patch for the OOM class |
 | Nextcloud 33.0.x test deployment, PHP 8.4.21 `mod_php` | Version/config validated; RCE not executed | App-independent primitive; deployment-specific |
 | FPM A/C/E | RCE with lab prerequisites | App/config-dependent |
-| FPM minimalist SAPI boundary | SAPI-level upload progress confirmed; execution blocked | Defended by architecture (no app gadgets, `cleanup=1`) |
+| FPM minimalist SAPI boundary | SAPI upload progress confirmed; app-level Chain A blocked, core E-OOM viable via bounded ASLR search | Defended at app layer, susceptible at core engine |
 | Other PHP applications | not tested | Expected under the same conditions; not proven |
 
 #### 5.6.1 Case Study: FPM exploitability boundaries in minimalist environments (The stealmybitcoin.com Challenge)
