@@ -40,36 +40,30 @@ The vendor fixed the OOM/state-corruption class in PHP 8.4.27 (and the correspon
 
 The four technical boundaries established by empirical lab falsification:
 
-```
-+--------------------------------------------------------------------------------------------------+
-|                                    EXPLOITATION BOUNDARY SUMMARY                                 |
-+------------------------------------+------------------------------------+------------------------+
-| CONDITION / VECTOR                 | MEASURED BEHAVIOR                  | EXPLOITATION VERDICT   |
-+------------------------------------+------------------------------------+------------------------+
-| Stock Defaults (Content-Length)    | 8M post_max_size blocks bodies     | Safe: OOM unreachable  |
-| Unpatched mod_php (Chunked)        | post_max_size bypassed (>64M body) | Vuln: Startup OOM (500)|
-| Patched 8.4.27 / 8.5.12 (Chunked)  | Rejected: Actual POST length error | Patched: Body bounded  |
-| PHP-FPM SAPI (All bodies)          | FastCGI requires CONTENT_LENGTH    | Immune: No chunked OOM |
-| In-band Cookie Leak (ASLR On)      | Leaks 47 free-list ptrs (chunk base)| Narrowed: 1.88MB window|
-| Off + ASLR-on (FPM + mod_php)      | Worker dies (FPM) / State cleared  | Route Closed (Evidence)|
-+------------------------------------+------------------------------------+------------------------+
-```
+| Attack Vector / Condition | Measured SAPI & Engine Behavior | Exploitation Verdict |
+|---|---|:---:|
+| **Stock Defaults** (`Content-Length`) | 8M `post_max_size` caps body; payload A cannot reach 128M limit | `SAFE: OOM UNREACHABLE` |
+| **Unpatched `mod_php`** (Chunked) | `post_max_size` bypassed; chunked ~64M+ body triggers startup OOM | `VULN: STARTUP OOM (500)` |
+| **Patched 8.4.27 / 8.5.12** (Chunked) | Enforced: `Actual POST length does not match Content-Length` | `PATCHED: BODY BOUNDED` |
+| **PHP-FPM SAPI** (All bodies) | FastCGI requires `CONTENT_LENGTH`; chunked bodies unparsed | `IMMUNE: NO CHUNKED OOM` |
+| **In-band Cookie Leak** (ASLR On) | Discloses 47 free-list ptrs (chunk base); narrows `libphp` 1.88 MB | `NARROWED (NOT PINNED)` |
+| **Off + ASLR-on** (FPM + `mod_php`) | Worker exits (FPM) / State cleared by bailout (`mod_php`) | `ROUTE CLOSED (EVIDENCE)` |
 
 ```
                         MEMORY ALLOCATOR GEOMETRY (Zend MM)
-                        
-   [ 2 MiB Cached Allocator Chunk ]                   [ 2 MiB Main Allocator Chunk ]
-   +------------------------------------+             +-----------------------------+
-   | PS(id) Stale Buffer (4000 B)       |             |                             |
-   |   -> Forged zend_string header     |             |                             |
-   +------------------------------------+             |                             |
-   | Free-list Links (Bin-64)           |             |                             |
-   |   -> 47 heap pointers leaked       |             |                             |
-   +------------------------------------+             | Session HashTable           |
-   | Chunk Boundary (8,168 B max window)|             |   -> Target libphp pointer  |
-   +-----------------+------------------+             +--------------+--------------+
-                     |                                               ^
-                     +------ Delta: +8,745,096 B (UNREACHABLE) ------+
++------------------------------------+------------------------------------+
+| 2 MiB Cached Allocator Chunk       | 2 MiB Main Allocator Chunk         |
++------------------------------------+------------------------------------+
+| PS(id) Stale Buffer (4000 B)       |                                    |
+|   -> Forged zend_string header     |                                    |
++------------------------------------+                                    |
+| Free-List Links (Bin-64)           |                                    |
+|   -> 47 heap pointers leaked       |                                    |
++------------------------------------+ Session HashTable                  |
+| Chunk Boundary (8,168 B max window)|   -> Target libphp pointer         |
++-----------------+------------------+-----------------+------------------+
+                  |                                    ^
+                  +---- Delta: +8,745,096 B (OOB) -----+
 ```
 
 ### 1. Default limits stop the published payloads; chunked route is version-scoped
