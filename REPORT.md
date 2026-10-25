@@ -318,15 +318,17 @@ deployment is exploitable with the same PoC".
 | FPM minimalist SAPI boundary | SAPI-level upload progress confirmed; execution blocked | Defended by architecture (no app gadgets, `cleanup=1`) |
 | Other PHP applications | not tested | Expected under the same conditions; not proven |
 
-#### 5.6.1 Case Study: FPM exploitability boundaries in minimalist environments
+#### 5.6.1 Case Study: FPM exploitability boundaries in minimalist environments (The stealmybitcoin.com Challenge)
 
 In response to community discussions concerning whether PHP2SHELL is realistically exploitable
-on a stock Nginx + PHP-FPM deployment without application-layer flaws, we evaluated the request
-startup boundaries against a public challenge environment running `PHP 8.4.26` behind an Nginx
-reverse proxy exposing only a minimal request responder (`ping.php` answering `POST message=ping`
-with `pong`, lacking `session_start()`).
+on a stock Nginx + PHP-FPM deployment without application-layer flaws, we conducted a non-destructive
+audit against the public community challenge environment **`stealmybitcoin.com`** (a bounty challenge
+running unpatched `PHP 8.4.26` behind an Nginx reverse proxy, designed specifically to test if
+attackers could reach an on-host `/print-flag` binary via PHP2SHELL). The target exposed only a
+minimal request responder (`ping.php` answering `POST message=ping` with `pong`, lacking `session_start()`).
 
-Our differential lab verification (isolated harness with `phpdebug:8.4.26-fpm`) established:
+Our differential lab verification (isolated harness with `phpdebug:8.4.26-fpm`) and non-destructive
+probes against `stealmybitcoin.com` established:
 
 1. **SAPI-level session initialization without `session_start()`:**
    The RFC 1867 multipart parser runs during request startup, prior to script execution. When
