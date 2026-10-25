@@ -1,0 +1,22 @@
+services:
+  vuln-8426:
+    image: php:8.4.26-apache
+    container_name: php2shell-vuln-8426
+    ports:
+      - "18080:80"
+    environment:
+      - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d
+    volumes:
+      - ./conf/hardening-off.ini:/usr/local/etc/php/conf.d/z-lab.ini:ro
+      - ./web:/var/www/html:ro
+
+  patched-8427:
+    image: php:8.4.27-apache
+    container_name: php2shell-patched-8427
+    ports:
+      - "18081:80"
+    environment:
+      - PHP_INI_SCAN_DIR=/usr/local/etc/php/conf.d
+    volumes:
+      - ./conf/hardening-off.ini:/usr/local/etc/php/conf.d/z-lab.ini:ro
+      - ./web:/var/www/html:ro

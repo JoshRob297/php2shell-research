@@ -163,6 +163,24 @@ directory) is a separate issue and stays in remediation.
 
 ### 5.1 Preconditions
 
+```mermaid
+flowchart TD
+    A[Incoming HTTP Request] --> B{SAPI Layer}
+    B -->|RFC 1867 Multipart Parser| C[Request Startup Phase]
+    C --> D{PHP_SESSION_UPLOAD_PROGRESS present?}
+    D -->|Yes| E[Initialize Session in Zend MM]
+    D -->|No| F[Standard Body Ingestion]
+    E --> G{Memory Allocation >= memory_limit?}
+    G -->|Normal Size| H[Execute Script: Application Logic]
+    G -->|OOM Bailout Triggered| I[Zend Engine Bailout Path]
+    I --> J{Unwind Clean?}
+    J -->|Fully Unwound 8.4.27+| K[Clean Worker Reset]
+    J -->|Stale Pointer Survives 8.4.26| L[Dangling Struct in Worker Heap]
+    L --> M{SAPI Environment}
+    M -->|mod_php prefork| N[Worker loops: Follow-up request inherits state]
+    M -->|PHP-FPM| O[Worker exits with code 70: Master spawns fresh worker]
+```
+
 The full OOM/RCE chain observed in the lab required:
 
 - Apache with `mod_php` and `mpm_prefork` (multiple workers);
@@ -265,6 +283,27 @@ different calibration or leak.
 Name note: the public fork labels its third request-level arm E (decode failure + destructor,
 local file planting). This report calls that arm E (decode failure) and labels the FPM
 stale-`BG(unserialize)` chain E-OOM, the OOM/state primitive fixed in 8.4.27.
+
+```mermaid
+flowchart LR
+    subgraph Request_Level_Chains["Request-Level Chains (App Prerequisite Needed)"]
+        A["Chain A: Upload Progress"] --> A1["Plant SID via Multipart"]
+        A1 --> A2["Requires LFI or include sink"]
+        
+        C["Chain C: Serializer Mismatch"] --> C1["Mismatched handlers"]
+        C1 --> C2["Requires per-directory ini"]
+        
+        E["Chain E: Decode Failure"] --> E1["Fails decode + calls destructor"]
+        E1 --> E2["Requires local file planting"]
+    end
+
+    subgraph Core_Engine_Chains["Core Engine Memory Chains (CVE-2026-109618/19)"]
+        OOM["Large Multipart Ingestion"] --> BAIL["Engine Bailout during Startup"]
+        BAIL --> FPM["PHP-FPM: Crash exit 70 / DoS"]
+        BAIL --> MOD["mod_php: Residual BG dangling pointer"]
+        MOD --> EOOM["E-OOM: Stale BG(unserialize) write to ub_write"]
+    end
+```
 
 Public PoCs group several chains under the php2shell name. They are useful, but they are not all
 the same vulnerability and not all are remote:

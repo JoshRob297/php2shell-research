@@ -172,3 +172,71 @@ php2shell-labelled chain. Request-level chains that do not require an OOM
 (section 3) depend on application code and local conditions; assess them
 separately.
 
+---
+
+## 9. Drop-In Hardening & Detection Snippets
+
+For immediate defense in production, apply the following configurations at the respective layers:
+
+### A. PHP Engine Hardening (`/etc/php/*/conf.d/99-php2shell-hardening.ini`)
+
+```ini
+; Disable upload progress tracking if real-time upload meters are unused
+session.upload_progress.enabled = Off
+
+; Enforce strict session handling (mitigates arbitrary SID planting via Chain A)
+session.use_strict_mode = 1
+
+; Ensure immediate unlinking of completed progress descriptors
+session.upload_progress.cleanup = On
+
+; Disable in-band address leaking via PHP errors
+display_errors = Off
+display_startup_errors = Off
+```
+
+### B. Nginx Reverse Proxy Protection (`/etc/nginx/conf.d/php2shell-guard.conf`)
+
+```nginx
+# 1. Enforce strict request body caps to prevent chunked/streaming OOM amplification
+client_max_body_size 8M;
+
+# 2. Block abnormally large Cookie headers (forged Zend MM cookie channel ~4000 bytes)
+large_client_header_buffers 4 8k;
+
+# 3. Drop multipart requests attempting to force arbitrary upload progress markers
+location ~ \.php$ {
+    # If using Coraza / ModSecurity WAF module:
+    # SecRule ARGS:PHP_SESSION_UPLOAD_PROGRESS "@rx [^a-zA-Z0-9_\-]" "id:1096181,phase:2,deny,status:400"
+
+    fastcgi_pass unix:/run/php/php-fpm.sock;
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+}
+```
+
+### C. ModSecurity / OWASP CRS WAF Rule (`php2shell-crs.conf`)
+
+```apache
+# Block multipart parameter manipulation targeting PHP upload progress buffer
+SecRule REQUEST_METHOD "@streq POST" \
+    "id:202610961,phase:2,deny,status:403,log,msg:'Potential PHP2SHELL Request-Startup Exploit Attempt',\
+    chain"
+    SecRule ARGS_NAMES "@streq PHP_SESSION_UPLOAD_PROGRESS" \
+        "chain"
+        SecRule REQUEST_HEADERS:Cookie "@rx (?:PHPSESSID=.{128,})"
+```
+
+### D. Log Monitoring / SIEM Query (Detecting PHP-FPM Worker Aborts)
+
+In PHP-FPM, unhandled allocator bailouts or OOMs trigger exit code 70:
+
+```bash
+# Grep for worker exit 70 crashes in PHP-FPM master logs
+grep -E "child [0-9]+ exited with code 70" /var/log/php*-fpm.log
+
+# Systemd journal filter for FPM worker aborts
+journalctl -u php-fpm -g "exited with code 70"
+```
+
+
