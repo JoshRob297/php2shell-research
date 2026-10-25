@@ -505,3 +505,78 @@ Raw: private audit repo `evidence/fase7-chunked/` (8.4.26 defaults) and
 leak sweep at defaults, `EG()` at shutdown, CVE-2026-115560 attempt).
 
 
+
+## 13. Address-space inheritance and worker pairing (follow-up measurements)
+
+Three questions that the earlier sections left as assumptions were measured directly. All of
+them ran in the same disposable lab, loopback only.
+
+### 13.1 A pool does not re-randomise between workers
+
+`php-fpm` forks workers without `exec()`. A GDB probe (`tooling/labkit/psid_probe.gdb`) was
+attached to the worker that served a fixed request in each generation; the worker was killed
+between generations.
+
+| generation | worker PID | Zend MM chunk | `PS(id)` | session HashTable |
+|---|---|---|---|---|
+| 1 | 9 | `0x7f7529000000` | `0x7f752905f090` | `0x7f7529059118` |
+| 2 | 127 | `0x7f7529000000` | `0x7f752905f090` | `0x7f7529059118` |
+| 3 | 167 | `0x7f7529000000` | `0x7f752905f090` | `0x7f7529059118` |
+| master restart | 9 | `0x7fa018000000` | `0x7fa01805f090` | `0x7fa018059118` |
+| after restart | 59 | `0x7fa018000000` | `0x7fa01805f090` | `0x7fa018059118` |
+
+Identical within a master generation, different after a restart. The same holds for the chunk
+created by the OOM request itself: five generations, five times chunk `0x7f7ca6200000` and
+`PS(id)` page `0xa7000`, with the worker dying at exit 70 every time.
+
+Consequence: ASLR entropy is paid once per master start, not per request. "The next request
+gets a new process and a fresh address space" is false; the address space is inherited. The
+FPM route is closed because the OOM destroys the process that holds the leaked state, not
+because of randomization.
+
+### 13.2 The forged-cookie leak does not exist on FPM
+
+Ten A→B cycles on a single-worker FPM pool, `memory_limit=8M`, `post_max_size=64M`:
+payload A ended in `Allowed memory size of 8388608 bytes exhausted` inside
+`php_session_send_cookie`, the worker exited with code 70, and payload B returned a normal
+32-byte id in 10/10 cases. No cookie reached 1000 bytes. The replacement worker starts from a
+clean `zend_mm_heap`; the stale id was in the dead process.
+
+### 13.3 Worker pairing is deterministic under starvation, and a one-request worker breaks it
+
+Two FPM pools (N=2 and N=4), endpoint returning `getmypid()`, producer/consumer pair sent after
+holding N-1 workers with a request that streams its body slowly:
+
+| configuration | baseline | with N-1 held |
+|---|---|---|
+| N=2, `pm=static` | 0/10 | 10/10 |
+| N=4, `pm=static` | 0/30 | 30/30 |
+| N=16, `pm=static` | 0/30 | 30/30 |
+| N=16, `pm=dynamic` | 0/30 | 30/30 |
+| N=4, `pm=ondemand` | 30/30 | 30/30 |
+| N=4, `pm.max_requests=1` | 0/30 | 0/30 |
+| N=4, `pm.max_requests=2` | 5/30 | 30/30 |
+
+`pm=ondemand` reuses its single warmed worker, so even the baseline pairs. `pm.max_requests=1`
+destroys determinism completely: the worker exits after the producer, so no residual state
+survives to the consumer.
+
+The pool size can be inferred from outside by opening k slow-body connections and probing
+latency: `N = min{k : latency(probe_k) >= timeout}`. Verified at N=4 (jump at k=4, 804 ms) and
+N=8 (jump at k=8, 804 ms).
+
+### 13.4 Session planting from the application layer
+
+`session.serialize_handler=php` serialises `$_SESSION['C'] = (int)V` as `C|i:<V>;` — byte for
+byte what the write primitive expects. `php_binary` produces `\x01Ci:<V>;` and `php_serialize`
+produces `a:1:{s:1:"C";i:<V>;}`, neither of which works. The serialiser cannot produce the
+24-byte trailer used in the lab PoC (`C|i:<V>;AAAA`); appending a second key yields 27 bytes
+(`...;AAAA|N;`). Whether the calibrated chain tolerates the 27-byte form was not measured.
+
+`session.use_strict_mode=1` rejects a client-chosen id in the RFC1867 path on 8.4.26, 8.4.27 and
+8.5.12 (12 flag combinations): PHP generates a fresh id and no `sess_<chosen>` file appears.
+With `strict=0`, a `PHPSESSID` sent in the multipart body does create the session file even when
+`session.use_only_cookies=1`, which is the behaviour discussed in php-src PR #22113.
+
+Raw: private audit repo `evidence/f005a-codepointer/`, `evidence/f005b-session-plant/`,
+`evidence/f005c-worker-pairing/`, `evidence/f005d-oom-chunk/`.

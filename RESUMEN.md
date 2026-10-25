@@ -97,8 +97,9 @@ de explotación exitosa de las dos CVEs antes de la publicación.
 - Todo se midió en laboratorio, en loopback, con imágenes oficiales; no se atacó producción.
 - El RCE con `display_errors=Off` y ASLR on no se logro. El canal de la cookie filtra heap
   (base del chunk del id, 47 punteros de free-list) pero nunca la tabla de sesion, y acota
-  `libphp` a una ventana de 1.88 MB sin fijarla. Es de un solo uso por OOM y solo existe en
-  `mod_php` (en FPM el OOM mata al worker). En `mod_php`, el leak y la primitiva de
+  `libphp` a una ventana de 1.51 MB (~387 paginas) sin fijarla. Es de un solo uso por OOM y solo
+  existe en `mod_php` (en FPM el OOM mata al worker). En pools fork-based, el layout es heredado
+  entre hijos y solo cambia al reiniciar el master. En `mod_php`, el leak y la primitiva de
   `BG(unserialize)` colgante (E-OOM) son mutuamente excluyentes: A limpia el estado que E
   necesita. Ambas vias quedaron probadas y cerradas; otro build o primitiva podria cambiar la
   geometria.

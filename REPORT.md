@@ -202,26 +202,31 @@ information to complete the chain. With `display_errors=Off`, the attacker needs
 leak, typically through a large `PHPSESSID` cookie and the response header path.
 
 In the tested image, the stale session id lands in the cached chunk while the session
-`HashTable` — the only pointer to `libphp` — sits in the main chunk at a distance of
-8,745,096 bytes. The reachable window is 8,168 bytes at the chunk boundary, so the session
-table is never disclosed.
+`HashTable` sits in the main chunk at a distance of 8,745,096 bytes. The reachable window is
+8,168 bytes at the chunk boundary, so the session table is never disclosed. The distance is
+state-dependent, not a constant: in a clean request without the OOM grooming, a GDB probe put
+the session `HashTable` 24,440 bytes *before* `PS(id)` in the same 2 MiB chunk. Both
+placements are outside the forward-only cookie window, so the conclusion holds, but the
+"different chunk, 8.7 MB away" figure should not be read as universal.
 
 The forged cookie does over-read past its own filler, though: across 8M-override runs it
 carried 525-841 bytes outside the session alphabet, including 47 pointer-like values at
 64-byte intervals from offset 1000. A GDB follow-up identified them as the Zend MM bin-64
 free-list links carved out of a previous request's freed 4000-byte field buffer. They disclose
 the id chunk base (mask 2 MB) and nothing else: no live object, no session data, no code
-pointer. The distance from that chunk base to `libphp` text varied from `0x289bc00` to
-`0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant
-(`delta % 0x1000 == 0xc00`). The leak therefore **narrows `libphp` to a ~481-page window but
-does not pin it**, and it is single-shot per OOM (a repeated forge without a fresh OOM returns
-a normal 32-byte cookie, and consecutive OOM cycles reuse the same chunk, page and delta).
+pointer. The distance from that chunk base to `libphp` text varied from `-0x1ba1000` to
+`-0x1d24000` (a range of 1.51 MB / `0x183000`) across 10 fresh master restarts with full ASLR,
+with strict page alignment (`delta % 0x1000 == 0`). The leak therefore **narrows `libphp` (and
+the target `&sapi_module` structure at offset `0x0132ca80`) to a ~387-page window but does not
+pin it**, and it is single-shot per OOM (a repeated forge without a fresh OOM returns a normal
+32-byte cookie, and consecutive OOM cycles reuse the same chunk, page and delta).
 
 Two follow-up experiments closed the remaining `Off` + ASLR-on route:
 
 - **The channel is `mod_php`-only.** On FPM, payload A makes the worker exit
-  (`child ... exited with code 70`, nginx 502); the next request runs in a new process with a
-  fresh 32-byte id, so the stale id is never reused.
+  (`child ... exited with code 70`, nginx 502). The stale id does not survive the process: the
+  replacement worker starts from a clean `zend_mm_heap`, so the forged cookie channel has no
+  state to read. Measured 0/10: every payload B returned a normal 32-byte id.
 - **The leak and the stale-`BG(unserialize)` primitive (E-OOM) are mutually exclusive.** On
   `mod_php` the E-OOM primitive exists in isolation (a decode OOM leaves `BG(unserialize)` at
   `level=1` with a dangling `data` pointer and the next decode reuses it without a crash), but
@@ -229,6 +234,18 @@ Two follow-up experiments closed the remaining `Off` + ASLR-on route:
   decode-OOM producer leaves no stale session id. In one request the decode runs before the
   cookie is sent, so a single request cannot produce both states; in separate requests each one
   destroys the other's.
+
+The FPM closure is *not* explained by address randomization, and an earlier revision of this
+section said so incorrectly. In fork-based SAPIs the whole address-space layout is inherited:
+a GDB probe attached to three successive workers of the same `php-fpm` master (PIDs 9, 127 and
+167, each killed before the next) returned byte-identical values for the Zend MM chunk base,
+`PS(id)` and the session `HashTable`, and a fourth and fifth generation after a master restart
+were again identical to each other and different from the first three. The same holds for the
+chunk created by the OOM request itself: five generations, five identical chunk bases and five
+identical `PS(id)` pages, with the worker dying at exit 70 in every case. ASLR is paid once per
+master start, not per request, and worker respawns add zero entropy. The blocker is earlier:
+the OOM that produces the leak terminates the process that holds it, so the cookie is never
+delivered.
 
 Net: under `display_errors=Off` with ASLR on, neither the FPM path nor the `mod_php` path can
 combine a leak with the stale-`BG` write primitive; the `Off` + ASLR-off variant succeeded 3/3
@@ -387,11 +404,14 @@ chains; those require the application/configuration controls above.
 - The Nextcloud 33.0.x test deployment was used for configuration validation, not as the RCE
   target. The RCE proof was on the official PHP image; no other PHP applications were tested.
 - The `Off` + ASLR-on RCE was not achieved. The cookie channel discloses heap (id chunk base)
-  but never the session `HashTable`; the leak narrows `libphp` to a 1.88 MB window without
-  pinning it, is single-shot per OOM and `mod_php`-only (on FPM the OOM kills the worker). On
-  `mod_php` the leak and the stale-`BG(unserialize)` write primitive are mutually exclusive:
-  payload A's OOM clears the `BG(unserialize)` state that E-OOM needs. Both mechanisms were
-  tested and closed; a different build or primitive may change the geometry.
+  but never the session `HashTable`; the leak narrows `libphp` to a 1.51 MB (~387 pages) window
+  without pinning it, is single-shot per OOM and `mod_php`-only. On FPM the leak does not exist: the OOM
+  terminates the worker (exit 70, 0/10 forged cookies), and although the replacement inherits
+  the same layout — five generations measured byte-identical chunk and `PS(id)` — the stale heap
+  state does not cross the process boundary. On `mod_php` the leak and the stale-`BG(unserialize)`
+  write primitive are mutually exclusive: payload A's OOM clears the `BG(unserialize)` state that
+  E-OOM needs. Both mechanisms were tested and closed; a different build or primitive may change
+  the geometry.
 - The 4000-byte cookie is state-dependent: controlled repetitions on the official image gave
   0/3 with ASLR on and 0/3 with ASLR off.
 - Results are kernel- and allocator-sensitive. The same public PoC did not reproduce on every
@@ -426,9 +446,10 @@ should patch, then verify the configuration and
 application conditions that make the request-level chains reachable. On the open question of
 the in-band `Off` + ASLR-on route, the Phase 2 allocator study closed it by both tested
 mechanisms: the forged-cookie channel discloses heap (id chunk base, 47 free-list pointers) but
-never the session `HashTable`, narrows `libphp` to a 1.88 MB window without pinning it, is
-single-shot per OOM and `mod_php`-only; and on `mod_php` the leak and the stale-`BG(unserialize)`
-write primitive are mutually exclusive, so the two cannot be combined in one worker.
+never the session `HashTable`, narrows `libphp` to a 1.51 MB (~387 pages) window without
+pinning it, is single-shot per OOM and `mod_php`-only; and on `mod_php` the leak and the
+stale-`BG(unserialize)` write primitive are mutually exclusive, so the two cannot be combined
+in one worker.
 Independent reproduction
 matters: a CVE identifier, a scanner verdict or a public exploit name is not proof of
 exploitability on a given build.
