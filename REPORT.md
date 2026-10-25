@@ -393,9 +393,28 @@ probes against `stealmybitcoin.com` established:
      status and an immediate worker replacement by the master pool, terminating the corrupt state
      without exposing memory disclosures or forged cookies to the reverse proxy.
 
+4. **Remote Memory Exploitation vs. ASLR Search Space (Post-Mortem Verification):**
+   Following the public resolution of the challenge by security researcher `@killa` (confirmed by
+   the challenge author via Hacker News Update 4), community analysis coalesced around shrinking the
+   heap allocation dispersion window (`B1 leak` variance) derived from the `9bie` allocator model.
+   
+   Our differential lab verification independently verified the microarchitectural mechanism enabling
+   this exploitation path:
+   - **Master-Worker Zero-Entropy Inheritance (F-005a):** In standard PHP-FPM prefork pools, worker
+     processes inherit the exact virtual memory layout of the master process via `fork()`. As long
+     as the master process is not restarted, `php-fpm` and `libc` base addresses remain 100% constant
+     across worker generations (0 bits of entropy between respawns).
+   - **Bounded Page Space (F-005e):** The maximum delta variance between allocator chunk bases and
+     executable text spans **1.51 MB (`0x183000`)**, representing an address space of exactly **387
+     candidate pages**.
+   - **Deterministic Search Feasibility:** Because worker crashes (exit 70) do not perturb the master's
+     base address, an automated harness probing candidate pages sequentially can span the entire 387-page
+     window in under 40 seconds at a conservative rate of 10 req/s, without needing an in-band cookie leak.
+
 **Conclusion:** A stock Nginx + PHP-FPM deployment running vulnerable PHP 8.4.26 is structurally
-resilient against end-to-end command execution unless accompanied by permissive application-layer
-primitives or non-default session lifecycle settings (`cleanup = 0`, `strict_mode = 0`).
+resilient against standard application-level session abuse (Chain A). However, it remains susceptible
+to direct core memory exploitation (E-OOM / Zend MM allocation alignment) because FPM's fork-based worker
+lifecycle preserves base addresses, reducing remote ASLR defeat to a bounded, deterministic search space.
 
 Exploitability depends on the SAPI (`mod_php` prefork vs PHP-FPM), worker count,
 `session.upload_progress`, `memory_limit`/`post_max_size`, ASLR, allocator and kernel layout,
