@@ -38,68 +38,52 @@ The vendor fixed the OOM/state-corruption class in PHP 8.4.27 (and the correspon
 
 ## Critical Real-World Boundaries
 
-```mermaid
-flowchart TD
-    Start["Remote Request Startup"] --> Body{"Request Body Type?"}
-    Body -->|Content-Length| CL{"post_max_size\nEnforced?"}
-    CL -->|Stock 8M Limit| Safe1["OOM Bailout Blocked\n(Clean HTTP 200, published payloads fail)"]
-    
-    Body -->|Transfer-Encoding: chunked| SAPI{"SAPI / Patch Level?"}
-    SAPI -->|PHP-FPM| Safe2["FastCGI requires CONTENT_LENGTH\n(Not parsed / nginx 413)"]
-    SAPI -->|8.4.27 / 8.5.12| Safe3["Patched: Chunked limit enforced\n(Actual POST length warning)"]
-    SAPI -->|Unpatched mod_php| OOM["Startup OOM Triggered\n(>64 MB body reaches 128M limit)"]
-    
-    OOM --> ASLR{"ASLR & display_errors"}
-    ASLR -->|display_errors=On| RCE1["RCE Confirmed (3/3)"]
-    ASLR -->|Off + ASLR off| RCE2["RCE Confirmed (3/3)"]
-    ASLR -->|Off + ASLR on| Blocked["Route Closed\n(1.88 MB Window narrowed, not pinned;\nLeak & Chain E mutually exclusive)"]
+The four technical boundaries established by empirical lab falsification:
 
-    style Safe1 fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px
-    style Safe2 fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px
-    style Safe3 fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px
-    style Blocked fill:#fef2f2,stroke:#dc2626,stroke-width:1.5px
-    style RCE1 fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px
-    style RCE2 fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px
+```
++--------------------------------------------------------------------------------------------------+
+|                                    EXPLOITATION BOUNDARY SUMMARY                                 |
++------------------------------------+------------------------------------+------------------------+
+| CONDITION / VECTOR                 | MEASURED BEHAVIOR                  | EXPLOITATION VERDICT   |
++------------------------------------+------------------------------------+------------------------+
+| Stock Defaults (Content-Length)    | 8M post_max_size blocks bodies     | Safe: OOM unreachable  |
+| Unpatched mod_php (Chunked)        | post_max_size bypassed (>64M body) | Vuln: Startup OOM (500)|
+| Patched 8.4.27 / 8.5.12 (Chunked)  | Rejected: Actual POST length error | Patched: Body bounded  |
+| PHP-FPM SAPI (All bodies)          | FastCGI requires CONTENT_LENGTH    | Immune: No chunked OOM |
+| In-band Cookie Leak (ASLR On)      | Leaks 47 free-list ptrs (chunk base)| Narrowed: 1.88MB window|
+| Off + ASLR-on (FPM + mod_php)      | Worker dies (FPM) / State cleared  | Route Closed (Evidence)|
++------------------------------------+------------------------------------+------------------------+
 ```
 
-> [!NOTE]
-> **1. Default limits stop the published payloads, and the chunked route is version-scoped.**  
-> Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`. In re-runs against vanilla defaults, the published multipart payloads (~3.7 MB) do not trigger an Out-Of-Memory (OOM) bailout (clean HTTP 200), and any body sent with a `Content-Length` is capped at `post_max_size`. On **unpatched** branches (8.2.34, 8.3.35, 8.4.26) `post_max_size` is not enforced on chunked bodies: a chunked 30 MB multipart parses in full and a chunked 70 MB multipart OOMs at request startup. The **8.4.27/8.5.12 patch closes this**: chunked bodies are bounded with `Actual POST length does not match Content-Length, and exceeds 8388608 bytes`. The route is also `mod_php`-only: PHP-FPM needs `CONTENT_LENGTH` (chunked bodies are not parsed) and nginx's body cap applies to chunked. See `EVIDENCE.md` section 12.
-
-> [!IMPORTANT]
-> **2. The Session HashTable Is Out of the Cookie Window, but the Channel Leaks Heap:**  
-> Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.  
-> The forged cookie does over-read past its own filler: the measured 4000/5000-byte values carry 525-841 bytes outside the session alphabet, including **47 pointer-like values** inside the id's 2 MB chunk (Zend MM bin-64 free-list links), disclosing the chunk base. The distance from that base to libphp text varied between `0x289bc00` and `0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant (`delta % 0x1000 == 0xc00`), so the leak **narrows libphp to a ~481-page window but does not pin it**. This is a heap-disclosure primitive, not the session-table read and not a demonstrated full ASLR bypass. See `validation/`.
-
-```mermaid
-flowchart LR
-    subgraph Chunk_Cached["2 MiB Cached Chunk (Attacker Reachable)"]
-        direction TB
-        ID["PS(id) Stale Buffer\n(4000 B forged zend_string)"]
-        FL["Zend MM Bin-64 Free-List Links\n(47 heap pointers leaked)"]
-        Boundary["Chunk Boundary\n(8,168 B max window)"]
-        ID --> FL --> Boundary
-    end
-
-    subgraph Chunk_Main["2 MiB Main Chunk (Unreachable)"]
-        HT["Session HashTable\n(Target libphp pointer)"]
-    end
-
-    Boundary -.->|Delta: +8,745,096 B (Unreachable)| HT
-    
-    style Chunk_Cached fill:#f0f9ff,stroke:#0284c7,stroke-width:1.5px
-    style Chunk_Main fill:#fef2f2,stroke:#ef4444,stroke-width:1.5px
-    style HT fill:#fee2e2,stroke:#b91c1c
-    style ID fill:#e0f2fe,stroke:#0369a1
+```
+                        MEMORY ALLOCATOR GEOMETRY (Zend MM)
+                        
+   [ 2 MiB Cached Allocator Chunk ]                   [ 2 MiB Main Allocator Chunk ]
+   +------------------------------------+             +-----------------------------+
+   | PS(id) Stale Buffer (4000 B)       |             |                             |
+   |   -> Forged zend_string header     |             |                             |
+   +------------------------------------+             |                             |
+   | Free-list Links (Bin-64)           |             |                             |
+   |   -> 47 heap pointers leaked       |             |                             |
+   +------------------------------------+             | Session HashTable           |
+   | Chunk Boundary (8,168 B max window)|             |   -> Target libphp pointer  |
+   +-----------------+------------------+             +--------------+--------------+
+                     |                                               ^
+                     +------ Delta: +8,745,096 B (UNREACHABLE) ------+
 ```
 
-> [!WARNING]
-> **3. The leak channel is `mod_php`-only.**  
-> On FPM, payload A makes the worker exit (pool logs `child ... exited with code 70`, nginx returns 502); the follow-up request runs in a new process with a fresh 32-byte id and never reuses the stale one.
+### 1. Default limits stop the published payloads; chunked route is version-scoped
+Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_max_size = 8M`. In re-runs against vanilla defaults, the published multipart payloads (~3.7 MB) do not trigger an Out-Of-Memory (OOM) bailout (clean HTTP 200), and any body sent with a `Content-Length` is capped at `post_max_size`. On **unpatched** branches (8.2.34, 8.3.35, 8.4.26) `post_max_size` is not enforced on chunked bodies: a chunked 30 MB multipart parses in full and a chunked 70 MB multipart OOMs at request startup. The **8.4.27/8.5.12 patch closes this**: chunked bodies are bounded with `Actual POST length does not match Content-Length, and exceeds 8388608 bytes`. The route is also `mod_php`-only: PHP-FPM needs `CONTENT_LENGTH` (chunked bodies are not parsed) and nginx's body cap applies to chunked. See `EVIDENCE.md` section 12.
 
-> [!WARNING]
-> **4. The leak and the stale-`BG(unserialize)` primitive (E-OOM) are mutually exclusive.**  
-> This closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitive exists in isolation (a decode OOM leaves `BG(unserialize)` at `level=1` with a dangling `data` pointer and the next decode reuses it without a crash), but payload A's OOM in `php_session_send_cookie` clears exactly that state (`level=0`), and the decode-OOM producer leaves no stale session id. One request cannot produce both states (the decode runs before the cookie is sent); separate requests destroy each other's.
+### 2. The Session HashTable is out of the cookie window, but the channel leaks heap
+Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.  
+The forged cookie does over-read past its own filler: the measured 4000/5000-byte values carry 525-841 bytes outside the session alphabet, including **47 pointer-like values** inside the id's 2 MB chunk (Zend MM bin-64 free-list links), disclosing the chunk base. The distance from that base to libphp text varied between `0x289bc00` and `0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant (`delta % 0x1000 == 0xc00`), so the leak **narrows libphp to a ~481-page window but does not pin it**. This is a heap-disclosure primitive, not the session-table read and not a demonstrated full ASLR bypass. See `validation/`.
+
+### 3. The leak channel is `mod_php`-only
+On FPM, payload A makes the worker exit (pool logs `child ... exited with code 70`, nginx returns 502); the follow-up request runs in a new process with a fresh 32-byte id and never reuses the stale one.
+
+### 4. The leak and the stale-`BG(unserialize)` primitive (E-OOM) are mutually exclusive
+This closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitive exists in isolation (a decode OOM leaves `BG(unserialize)` at `level=1` with a dangling `data` pointer and the next decode reuses it without a crash), but payload A's OOM in `php_session_send_cookie` clears exactly that state (`level=0`), and the decode-OOM producer leaves no stale session id. One request cannot produce both states (the decode runs before the cookie is sent); separate requests destroy each other's.
 
 ---
 
