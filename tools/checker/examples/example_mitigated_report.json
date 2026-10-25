@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "target": "https://app.example.internal/",
+    "timestamp": "2026-10-25T16:05:00+00:00",
+    "mode": "external_authorized",
+    "non_destructive_guarantee": "Cumplida: peticiones inocuas < 10 KB, sin heap grooming ni OOM",
+    "total_requests": 3
+  },
+  "verdict": "MITIGATED",
+  "exposure_score_pct": 13.0,
+  "score_breakdown": {
+    "patched_version": {
+      "name": "Version PHP Parcheada",
+      "weight": 0.25,
+      "state": "Version parcheada o superior (8.4.27)",
+      "exposure_contribution": 0.0
+    },
+    "session_strict_mode": {
+      "name": "session.use_strict_mode",
+      "weight": 0.25,
+      "state": "Activo (fuerza nuevo SID ante identificador no inicializado)",
+      "exposure_contribution": 0.0
+    },
+    "upload_progress": {
+      "name": "session.upload_progress",
+      "weight": 0.2,
+      "state": "Bloqueado o no procesa formularios multipart",
+      "exposure_contribution": 0.0
+    },
+    "body_limits": {
+      "name": "Limites de Cuerpo y Proxy",
+      "weight": 0.2,
+      "state": "Limites defensivos activos detectados (HTTP 413)",
+      "exposure_contribution": 0.0
+    },
+    "sapi_architecture": {
+      "name": "Arquitectura SAPI",
+      "weight": 0.1,
+      "state": "PHP-FPM con frontal proxy detectado",
+      "exposure_contribution": 0.08
+    }
+  },
+  "fingerprint": {
+    "status_code": 200,
+    "server": "nginx/1.26.2",
+    "x_powered_by": "PHP/8.4.27",
+    "via": null,
+    "php_version": "8.4.27",
+    "php_branch": "8.4",
+    "is_unpatched_version": false,
+    "patched_target": "8.4.27",
+    "sapi": {
+      "sapi_hint": "fpm-proxy",
+      "confidence": "high",
+      "evidence": [
+        "Frontal nginx/1.26.2 con backend PHP via cabecera X-Powered-By"
+      ]
+    },
+    "raw_headers": {
+      "server": "nginx/1.26.2",
+      "x-powered-by": "PHP/8.4.27",
+      "content-type": "text/html; charset=UTF-8"
+    },
+    "error": null
+  },
+  "session": {
+    "probe_sid_sent": "checke...[sha256:5a91b4e2]",
+    "status_code": 200,
+    "set_cookie_received": true,
+    "session_cookie_replaced": true,
+    "use_strict_mode_detected": true,
+    "details": "Servidor rechazo SID no inicializado y emitio nuevo PHPSESSID. session.use_strict_mode activo o regeneracion forzada (mitigado).",
+    "error": null
+  },
+  "network": {
+    "status_code": 413,
+    "multipart_accepted": false,
+    "body_limit_detected": true,
+    "proxy_buffering_hint": null,
+    "upload_progress_supported": false,
+    "details": "Servidor o proxy rechazo peticion por tamano (HTTP 413: limites estrictos activos).",
+    "bytes_sent": 241,
+    "error": null
+  },
+  "remediations": []
+}

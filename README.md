@@ -115,6 +115,7 @@ This closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitiv
 | `METHODOLOGY.md` | Lab setup, application scope, AI/subagent workflow and reproducibility |
 | `POCS.md` | Public PoCs reviewed and independent verification results |
 | `REMEDIATION.md` | Vendor patch, configuration hardening, detection and verification |
+| `tools/checker/` | Non-destructive diagnostic CLI for defensive posture validation |
 | `COVERAGE.md` | Test matrix by CVE, chain, version and status |
 | `FAQ.md` | Common questions and scope clarifications |
 | `GLOSSARY.md` | Terms used in the report |

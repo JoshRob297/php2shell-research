@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "target": "http://127.0.0.1:8080/",
+    "timestamp": "2026-10-25T16:00:00+00:00",
+    "mode": "local_lab",
+    "non_destructive_guarantee": "Cumplida: peticiones inocuas < 10 KB, sin heap grooming ni OOM",
+    "total_requests": 3
+  },
+  "verdict": "EXPOSED",
+  "exposure_score_pct": 73.0,
+  "score_breakdown": {
+    "patched_version": {
+      "name": "Version PHP Parcheada",
+      "weight": 0.25,
+      "state": "Version vulnerable (8.4.26 < 8.4.27)",
+      "exposure_contribution": 0.25
+    },
+    "session_strict_mode": {
+      "name": "session.use_strict_mode",
+      "weight": 0.25,
+      "state": "Inactivo / expuesto (acepta SID arbitrario)",
+      "exposure_contribution": 0.25
+    },
+    "upload_progress": {
+      "name": "session.upload_progress",
+      "weight": 0.2,
+      "state": "Activo y procesa multipart con PHP_SESSION_UPLOAD_PROGRESS",
+      "exposure_contribution": 0.2
+    },
+    "body_limits": {
+      "name": "Limites de Cuerpo y Proxy",
+      "weight": 0.2,
+      "state": "Sin limites restrictivos detectados en probe corta (< 10 KB)",
+      "exposure_contribution": 0.1
+    },
+    "sapi_architecture": {
+      "name": "Arquitectura SAPI",
+      "weight": 0.1,
+      "state": "PHP-FPM con frontal proxy detectado",
+      "exposure_contribution": 0.08
+    }
+  },
+  "fingerprint": {
+    "status_code": 200,
+    "server": "nginx/1.24.0",
+    "x_powered_by": "PHP/8.4.26",
+    "via": null,
+    "php_version": "8.4.26",
+    "php_branch": "8.4",
+    "is_unpatched_version": true,
+    "patched_target": "8.4.27",
+    "sapi": {
+      "sapi_hint": "fpm-proxy",
+      "confidence": "high",
+      "evidence": [
+        "Frontal nginx/1.24.0 con backend PHP via cabecera X-Powered-By"
+      ]
+    },
+    "raw_headers": {
+      "server": "nginx/1.24.0",
+      "x-powered-by": "PHP/8.4.26",
+      "content-type": "text/html; charset=UTF-8"
+    },
+    "error": null
+  },
+  "session": {
+    "probe_sid_sent": "checke...[sha256:7d8a2f1c]",
+    "status_code": 200,
+    "set_cookie_received": true,
+    "session_cookie_replaced": false,
+    "use_strict_mode_detected": false,
+    "details": "Servidor acepto y devolvio el SID arbitrario en Set-Cookie. session.use_strict_mode inactivo (expuesto).",
+    "error": null
+  },
+  "network": {
+    "status_code": 200,
+    "multipart_accepted": true,
+    "body_limit_detected": false,
+    "proxy_buffering_hint": null,
+    "upload_progress_supported": true,
+    "details": "El servidor acepto multipart/form-data con status 200. upload_progress potencialmente activo en la ruta evaluada.",
+    "bytes_sent": 241,
+    "error": null
+  },
+  "remediations": [
+    "Actualizar PHP de la version 8.4.26 a 8.4.27 o superior.",
+    "Configurar 'session.use_strict_mode = 1' en php.ini.",
+    "Desactivar 'session.upload_progress.enabled = 0' en php.ini si no se requiere.",
+    "Asegurar directivas 'client_max_body_size' (Nginx) o 'LimitRequestBody' (Apache) acotadas."
+  ]
+}

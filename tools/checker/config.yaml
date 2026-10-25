@@ -1,0 +1,37 @@
+# php2shell-checker configuracion por defecto
+# Diagnostico no destructivo de postura PHP y configuracion de sesiones
+
+general:
+  user_agent: "php2shell-checker/1.0 (+defensive-audit; non-destructive)"
+  timeout_seconds: 5
+  max_body_bytes: 8192
+  max_redirects: 3
+  verify_ssl: true
+
+patched_versions:
+  "8.2": "8.2.35"
+  "8.3": "8.3.36"
+  "8.4": "8.4.27"
+  "8.5": "8.5.12"
+
+weights:
+  patched_version: 0.25
+  session_strict_mode: 0.25
+  upload_progress: 0.20
+  body_limits: 0.20
+  sapi_architecture: 0.10
+
+thresholds:
+  exposed_min: 0.51
+  partially_exposed_min: 0.26
+  mitigated_max: 0.25
+
+guard:
+  require_authorization: true
+  allow_local_flag: true
+  blocked_schemes:
+    - "file"
+    - "gopher"
+    - "ftp"
+    - "dict"
+    - "tftp"
