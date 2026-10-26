@@ -231,11 +231,17 @@ def evaluate_scoring(
     # 5. SAPI conocido (peso 10%)
     sapi_hint = fp.get("sapi", {}).get("sapi_hint", "unknown")
     if sapi_hint == "fpm-proxy":
-        sapi_exp = 0.8
-        sapi_state = "PHP-FPM con frontal proxy detectado"
+        sapi_exp = 0.9
+        sapi_state = "PHP-FPM con frontal proxy detectado (Master hereda ASLR a workers)"
+        if fp.get("is_unpatched_version"):
+            remediations.append(
+                "ADVERTENCIA DE ARQUITECTURA (PHP-FPM): Los workers heredan el layout virtual del Master (0 bits de entropia). "
+                "Aunque la aplicacion carezca de LFI/gadgets, el motor permanece expuesto a corrupcion en Request Startup (E-OOM). "
+                "Aplicar parche de vendor >= 8.4.27 de inmediato."
+            )
     elif sapi_hint == "mod_php":
-        sapi_exp = 0.7
-        sapi_state = "Apache mod_php detectado"
+        sapi_exp = 0.8
+        sapi_state = "Apache mod_php detectado (reuso directo de workers en el mismo proceso)"
     else:
         sapi_exp = 0.3
         sapi_state = f"SAPI {sapi_hint} / no concluyente"

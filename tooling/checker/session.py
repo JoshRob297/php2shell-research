@@ -65,8 +65,9 @@ def check_session_strict_mode(
     Envia un GET inocuo con un identificador no inicializado para evaluar use_strict_mode.
     Total de datos transferidos: < 1 KB.
     """
-    random_suffix = secrets.token_hex(8)
-    probe_sid = f"checker_probe_{random_suffix}"
+    # Usar identificador alfanumerico estricto (32 chars hex) para cumplir con el charset
+    # de PHP Request Startup (^[a-zA-Z0-9,-]+$) y evitar abortos por caracteres no permitidos.
+    probe_sid = secrets.token_hex(16)
 
     headers = {
         "User-Agent": user_agent,

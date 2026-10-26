@@ -55,6 +55,9 @@ The tool evaluates targets across four independent defensive dimensions:
 - **`MITIGATED`**: Target runs a verified patched PHP release or has disabled `session.upload_progress.enabled`.
 - **`INCONCLUSIVE`**: Non-PHP backend, obscured headers, or insufficient diagnostic response data.
 
+> [!NOTE]
+> **FPM Architectural Awareness:** When an unpatched PHP engine is detected behind a PHP-FPM architecture, the diagnostic report issues an explicit core engine advisory. Because PHP-FPM worker pools inherit the Master virtual layout via `fork()`, the remote ASLR search space is bounded to 387 pages (1.51 MB). Even if the application layer lacks LFI sinks or enforces `use_strict_mode = 1`, the underlying engine remains vulnerable to Core E-OOM state corruption during Request Startup until patched.
+
 ---
 
 ## 4. Installation & Requirements
