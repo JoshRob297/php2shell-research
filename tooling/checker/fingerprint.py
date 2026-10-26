@@ -69,7 +69,11 @@ def detect_sapi(headers: Dict[str, str]) -> Dict[str, Any]:
     evidence = []
 
     # mod_php suele aparecer embebido en Server: Apache/2.4.x (Unix) PHP/8.x.x
-    if "php" in server.lower():
+    if "development server" in server.lower() or "cli-server" in server.lower():
+        sapi_type = "cli-server"
+        confidence = "high"
+        evidence.append("PHP Built-in Development Server detectado")
+    elif "php" in server.lower():
         sapi_type = "mod_php"
         confidence = "high"
         evidence.append(f"Server header embebe firma PHP: {server}")

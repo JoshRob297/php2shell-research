@@ -23,6 +23,20 @@ not redistribute them.
 | `dinosn/php-cve-2026-10961x-lab-poc` | Lab with instrumented allocator | Lab-assisted; uses `USE_ZEND_ALLOC=0`; not a universal remote PoC |
 | `pentestershell/php2shellbt` | Small scanner | Confirmed false positive on 8.4.27; CVEs mislabeled |
 | `eness/php2shell-...-PoC` | Placeholder | No code published |
+| `KillaBoi/StealMyBitcoin-PoC` | End-to-end 4-stage exploit resolving the stealmybitcoin challenge | Confirmed 100% in lab: resolves Chain D (forged `HashTable` -> `zif_system`) against `php -S` with workers |
+
+## KillaBoi: StealMyBitcoin CTF Exploit (Chain D & CLI-Server)
+
+- Python 3, standard library only, 20 HTTP requests maximum.
+- **SAPI Architecture Disambiguation:** Operates against Alpine `PHP 8.4.26` running the built-in CLI server (`php -S 0.0.0.0:8000`) with multiple workers (`PHP_CLI_SERVER_WORKERS=4`) behind an Nginx reverse proxy (`proxy_pass` HTTP).
+  - Crucial distinction: CLI-server workers persist across OOMs (identical to `mod_php`), allowing the 256-byte cookie leak to return Zend heap pointers and `zval_ptr_dtor`.
+  - In standard PHP-FPM, worker aborts (`exit 70`) prevent this leak mechanism, confirming our findings in section 11.
+- **Exploitation Mechanism (Chain D):**
+  - **Stage 1 (Heap Leak):** 1 producer (249 KB multipart OOM) + 8 pipelined consumers -> extracts 256 B cookie disclosing aligned 2 MiB Zend MM heap base.
+  - **Stage 2 (Code Leak):** 1 producer (251 KB multipart OOM) + 8 pipelined consumers -> extracts 16 B cookie disclosing `zval_ptr_dtor` (`0x112930` offset), calculating `zif_system = zval_ptr_dtor - 0x204BC0`.
+  - **Stage 3 (Callback):** 1 POST (368 KB) deploying a 384-byte forged `HashTable` overlapping a fake call frame and `zend_string` command. PHP request cleanup reads `pDestructor` as `zif_system` and executes the command.
+  - **Exfiltration:** Scans `/proc/self/fd/` to write stdout directly back to the active accepted HTTP client socket.
+- **Independent Lab Verification:** Replicated in our `cachy` environment on 2026-10-26 against `php:8.4.26-fpm-alpine3.23` + Nginx; achieved full command execution (UID 0) and recovered the test flag.
 
 ## 9bie: ASLR-bypass exploit
 

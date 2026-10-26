@@ -218,16 +218,30 @@ location ~ \.php$ {
 ### C. ModSecurity / OWASP CRS WAF Rule (`php2shell-crs.conf`)
 
 ```apache
-# Block multipart parameter manipulation targeting PHP upload progress buffer
+# 1. Block multipart parameter manipulation targeting PHP upload progress buffer with oversized cookies
 SecRule REQUEST_METHOD "@streq POST" \
-    "id:202610961,phase:2,deny,status:403,log,msg:'Potential PHP2SHELL Request-Startup Exploit Attempt',\
+    "id:202610961,phase:2,deny,status:403,log,msg:'Potential PHP2SHELL Request-Startup Exploit Attempt (Large Cookie)',\
     chain"
     SecRule ARGS_NAMES "@streq PHP_SESSION_UPLOAD_PROGRESS" \
         "chain"
         SecRule REQUEST_HEADERS:Cookie "@rx (?:PHPSESSID=.{128,})"
+
+# 2. Block deeply nested multipart array inflation (KillaBoi Chain D memory exhaustion pattern)
+SecRule REQUEST_METHOD "@streq POST" \
+    "id:202610962,phase:2,deny,status:400,log,msg:'Potential PHP2SHELL Nested Array Memory Exhaustion',\
+    chain"
+    SecRule REQUEST_HEADERS:Content-Type "@rx (?i)multipart/form-data" \
+        "chain"
+        SecRule ARGS_NAMES "@rx (?:\[[^\]]*\]){10,}"
 ```
 
-### D. Log Monitoring / SIEM Query (Detecting PHP-FPM Worker Aborts)
+### D. Architectural Hardening: Prohibition of Built-in CLI Server (`php -S`) in Production
+
+The `stealmybitcoin.com` challenge fell because it ran `php -S 0.0.0.0:8000` with `PHP_CLI_SERVER_WORKERS=4` behind Nginx instead of a true isolated FastCGI daemon.
+- **Never expose `php -S` to production traffic:** The built-in CLI server is strictly single-tenant development software; it does not isolate workers upon unhandled runtime exceptions or OOM bailouts.
+- **Always use modern PHP-FPM or Apache with proper process isolation.**
+
+### E. Log Monitoring / SIEM Query (Detecting Worker Aborts and Memory Exhaustion)
 
 In PHP-FPM, unhandled allocator bailouts or OOMs trigger exit code 70:
 
@@ -237,6 +251,9 @@ grep -E "child [0-9]+ exited with code 70" /var/log/php*-fpm.log
 
 # Systemd journal filter for FPM worker aborts
 journalctl -u php-fpm -g "exited with code 70"
+
+# Detect PHP memory exhaustion fatal errors across web server logs
+grep -E "Allowed memory size of [0-9]+ bytes exhausted" /var/log/nginx/*error.log /var/log/apache2/*error.log
 ```
 
 

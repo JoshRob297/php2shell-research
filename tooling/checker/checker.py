@@ -239,6 +239,13 @@ def evaluate_scoring(
                 "Aunque la aplicacion carezca de LFI/gadgets, el motor permanece expuesto a corrupcion en Request Startup (E-OOM). "
                 "Aplicar parche de vendor >= 8.4.27 de inmediato."
             )
+    elif sapi_hint == "cli-server":
+        sapi_exp = 1.0
+        sapi_state = "PELIGRO CRITICO: PHP Built-in CLI Server expuesto (reuso persistente de workers tras OOM / Chain D)"
+        remediations.append(
+            "CRITICO: No exponer 'php -S' (CLI server) a redes de produccion o trafico no confiable. "
+            "Migrar de inmediato a un entorno aislado con PHP-FPM o Apache con workers descartables."
+        )
     elif sapi_hint == "mod_php":
         sapi_exp = 0.8
         sapi_state = "Apache mod_php detectado (reuso directo de workers en el mismo proceso)"

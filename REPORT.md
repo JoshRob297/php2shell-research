@@ -357,64 +357,55 @@ deployment is exploitable with the same PoC".
 | FPM minimalist SAPI boundary | SAPI upload progress confirmed; app-level Chain A blocked, core E-OOM viable via bounded ASLR search | Defended at app layer, susceptible at core engine |
 | Other PHP applications | not tested | Expected under the same conditions; not proven |
 
-#### 5.6.1 Case Study: FPM exploitability boundaries in minimalist environments (The stealmybitcoin.com Challenge)
+#### 5.6.1 Case Study: Exploitability boundaries in minimalist environments (The stealmybitcoin.com Challenge)
 
 In response to community discussions concerning whether PHP2SHELL is realistically exploitable
-on a stock Nginx + PHP-FPM deployment without application-layer flaws, we conducted a non-destructive
-audit against the public community challenge environment **`stealmybitcoin.com`** (a bounty challenge
-running unpatched `PHP 8.4.26` behind an Nginx reverse proxy, designed specifically to test if
-attackers could reach an on-host `/print-flag` binary via PHP2SHELL). The target exposed only a
-minimal request responder (`ping.php` answering `POST message=ping` with `pong`, lacking `session_start()`).
+on a minimalist deployment without application-layer flaws, we conducted an audit against the public
+community challenge environment **`stealmybitcoin.com`** (a bounty challenge running unpatched `PHP 8.4.26`
+behind an Nginx reverse proxy, designed specifically to test if attackers could reach an on-host `/print-flag`
+binary via PHP2SHELL). The target exposed only a minimal request responder (`ping.php` answering
+`POST message=ping` with `pong`, lacking `session_start()`).
 
-Our differential lab verification (isolated harness with `phpdebug:8.4.26-fpm`) and non-destructive
-probes against `stealmybitcoin.com` established:
+Our differential lab verification and the subsequent public release of the winning exploit
+(`KillaBoi/StealMyBitcoin-PoC`) revealed the critical architectural factors:
 
-1. **SAPI-level session initialization without `session_start()`:**
+1. **SAPI Architecture Disambiguation (The CLI-Server Factor):**
+   While the deployment reported `Server: nginx` and `X-Powered-By: PHP/8.4.26`, the backend container
+   did not run a standard FastCGI PHP-FPM pool. Instead, it ran the built-in PHP development server
+   (`php -S 0.0.0.0:8000`) with multiple workers (`PHP_CLI_SERVER_WORKERS=4`) proxied via Nginx `proxy_pass`.
+   Crucially, CLI-server workers persist across request bailouts and do **not** abort with exit code 70
+   on OOM, behaving similarly to `mod_php` and allowing the in-band cookie leak to succeed. In a production
+   PHP-FPM deployment with FastCGI, worker aborts break this leak channel, confirming our section 11 findings.
+
+2. **SAPI-level session initialization without `session_start()`:**
    The RFC 1867 multipart parser runs during request startup, prior to script execution. When
    presented with a valid `multipart/form-data` payload containing `PHP_SESSION_UPLOAD_PROGRESS`
    and a conformant `PHPSESSID`, the SAPI opens and serializes the progress entry into the
    session store (`sess_<SID>`) independently of application-level session handling.
 
-2. **Strict session identifier constraints:**
+3. **Strict session identifier constraints:**
    The SAPI startup parser enforces strict character sets on the incoming `PHPSESSID`
    (`^[a-zA-Z0-9,-]{1,128}$`). Non-standard identifiers (e.g. incorporating underscores or
    extended markers) trigger an internal startup warning and immediately abort session writing,
    preventing arbitrary file planting with invalid identifier formats.
 
-3. **Inherent architectural mitigations:**
-   - **Automatic purge (`cleanup = 1`):** With the default `session.upload_progress.cleanup = 1`,
-     the planted session file is unlinked immediately upon request completion. In the absence
-     of sustained multi-second in-flight streaming or a concurrent race, no persistent artifact
-     remains on disk.
-   - **Absence of application gadgets:** Even when the session file is temporarily materialized,
-     an isolated FPM worker provides no execution vector without an application-level primitive
-     (`include`, `require`, phar wrapper, or unsafe deserialization) to read or interpret it.
-   - **Crash isolation:** Inducing unhandled allocator errors in FPM workers yields an exit 70
-     status and an immediate worker replacement by the master pool, terminating the corrupt state
-     without exposing memory disclosures or forged cookies to the reverse proxy.
+4. **Chain D Execution via Forged HashTable:**
+   The winning exploit implemented Chain D (stale executor state + forged `HashTable`):
+   - A 384-byte forged `HashTable` overlaps a fake call frame and `zend_string` command argument.
+   - PHP request cleanup evaluates `pDestructor` as `zif_system`, executing the command.
+   - Output exfiltration was achieved by iterating `/proc/self/fd/` to write directly back to the
+     active accepted HTTP socket descriptor.
 
-4. **Remote Memory Exploitation vs. ASLR Search Space (Post-Mortem Verification):**
-   Following the public resolution of the challenge by security researcher `@killa` (confirmed by
-   the challenge author via Hacker News Update 4), community analysis coalesced around shrinking the
-   heap allocation dispersion window (`B1 leak` variance) derived from the `9bie` allocator model.
-   
-   Our differential lab verification independently verified the microarchitectural mechanism enabling
-   this exploitation path:
-   - **Master-Worker Zero-Entropy Inheritance (F-005a):** In standard PHP-FPM prefork pools, worker
-     processes inherit the exact virtual memory layout of the master process via `fork()`. As long
-     as the master process is not restarted, `php-fpm` and `libc` base addresses remain 100% constant
-     across worker generations (0 bits of entropy between respawns).
-   - **Bounded Page Space (F-005e):** The maximum delta variance between allocator chunk bases and
-     executable text spans **1.51 MB (`0x183000`)**, representing an address space of exactly **387
-     candidate pages**.
-   - **Deterministic Search Feasibility:** Because worker crashes (exit 70) do not perturb the master's
-     base address, an automated harness probing candidate pages sequentially can span the entire 387-page
-     window in under 40 seconds at a conservative rate of 10 req/s, without needing an in-band cookie leak.
+5. **Master-Worker ASLR Stability:**
+   Because worker processes in prefork and CLI-server pools are spawned via `fork()` from a common
+   parent without `execve()`, base addresses for code and allocator chunks remain constant across
+   requests (0 bits of entropy between worker respawns). This allowed the 2-stage leak (heap base +
+   `zval_ptr_dtor`) to reliably calibrate the fake table distance.
 
-**Conclusion:** A stock Nginx + PHP-FPM deployment running vulnerable PHP 8.4.26 is structurally
-resilient against standard application-level session abuse (Chain A). However, it remains susceptible
-to direct core memory exploitation (E-OOM / Zend MM allocation alignment) because FPM's fork-based worker
-lifecycle preserves base addresses, reducing remote ASLR defeat to a bounded, deterministic search space.
+**Conclusion:** The challenge demonstrated that unpatched PHP 8.4.26 running with persistent workers
+(`mod_php` or `cli-server`) is vulnerable to remote code execution via Chain D without requiring
+application-level sinks. Conversely, standard PHP-FPM pools with worker isolation on crash remain
+resilient against this specific leak-and-reuse sequence.
 
 Exploitability depends on the SAPI (`mod_php` prefork vs PHP-FPM), worker count,
 `session.upload_progress`, `memory_limit`/`post_max_size`, ASLR, allocator and kernel layout,
