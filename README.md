@@ -17,39 +17,39 @@
 ---
 </div>
 
-- **Status**: final public release v1.0.0, 2026-10-24 (allocator microarchitecture, chunked SAPI boundaries, and FPM/mod_php route closures).
+- **Status**: final public release v1.1.0, 2026-10-26 (allocator microarchitecture, chunked SAPI boundaries, FPM/mod_php route closures, and StealMyBitcoin post-mortem audit).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
-- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/`), offline reachability calculators, and detection rules.
+- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
 - **AI-assisted**: multiple AI models and specialized subagents were used under human direction for review, lab orchestration and documentation checks; every finding was validated against commands, outputs or public sources. See `METHODOLOGY.md`.
 
 ## Executive summary
 
-Two CVEs were assigned to a cluster of bugs in PHP request startup:
+Three CVEs were assigned to the cluster of bugs in PHP request startup and session handling:
 
-- **CVE-2026-109618**: state corruption via bailout during request startup.
-- **CVE-2026-109619**: session decode OOM followed by stale global state.
+- **CVE-2026-109618**: state corruption via out-of-memory (OOM) bailout during request startup.
+- **CVE-2026-109619**: session decode OOM followed by stale global state and allocator UAF.
+- **CVE-2026-115560**: serializer state desynchronization via runtime `ini_set()` re-entrancy prior to `session_start()`.
 
-A third issue in the same feature, **CVE-2026-115560**, was disclosed on 2026-10-23 in an informational advisory. It is unfixed by the emergency releases and requires an unusual condition: the application configures `session.serialize_handler` as `php_binary` or `php_serialize` and then switches it back to `php` at runtime with `ini_set()` before `session_start()`. Mitigation: `session.upload_progress.enabled=0`. This report does not test it; our test deployment does not meet the condition.
+The vulnerabilities are pre-authentication and execute during request startup before application-level routing. In vulnerable prefork or persistent worker deployments (Apache `mod_php` or `php -S` CLI server) with session upload progress enabled and a sufficiently large request body, an unauthenticated remote attacker can corrupt worker state, disclose process memory (Zend heap bases and function pointers), and achieve full remote code execution as the web user (verified 100% in lab via Chain D forged `HashTable` callbacks to `zif_system`).
 
-The vulnerabilities are pre-authentication and run before application code. In a vulnerable `mod_php` prefork deployment with session upload progress enabled and a sufficiently large request body, a remote attacker can corrupt worker state, disclose process memory, and in the tested conditions achieve remote code execution as the web user. Denial of service through worker aborts is also possible.
-
-The vendor fixed the OOM/state-corruption class in PHP 8.4.27 (and the corresponding 8.3.36, 8.2.35 and 8.5.12 releases). The fix is necessary but not sufficient for every public exploit chain: the request-level A/C/E chains described by public PoCs still worked against 8.4.27 and 8.5.12 in our lab when their prerequisites were present. `session.use_strict_mode=1` blocked the fixed-session variant of chain A in our tests; the other chains require application-level or local conditions.
+The vendor patched the primary OOM/state-corruption class (CVE-2026-109618 / CVE-2026-109619) in PHP 8.4.27 (alongside 8.3.36, 8.2.35, and 8.5.12). The vendor fix bounds request lengths and unwinds startup globals cleanly, but does not address application-layer deserialization chains or CVE-2026-115560 (mitigated via `session.upload_progress.enabled=0`). In isolated PHP-FPM pools, crash handling (`exit 70`) prevents the in-band cookie leak channel entirely, but prefork Master inheritance leaves child workers with 0 bits of ASLR entropy across respawns.
 
 ---
 
 ## Critical Real-World Boundaries
 
-The four technical boundaries established by empirical lab falsification:
+The key technical boundaries established by empirical lab falsification:
 
 | Attack Vector / Condition | Measured SAPI & Engine Behavior | Exploitation Verdict |
 |---|---|:---:|
 | **Stock Defaults** (`Content-Length`) | 8M `post_max_size` caps body; payload A cannot reach 128M limit | `SAFE: OOM UNREACHABLE` |
 | **Unpatched `mod_php`** (Chunked) | `post_max_size` bypassed; chunked ~64M+ body triggers startup OOM | `VULN: STARTUP OOM (500)` |
 | **Patched 8.4.27 / 8.5.12** (Chunked) | Enforced: `Actual POST length does not match Content-Length` | `PATCHED: BODY BOUNDED` |
-| **PHP-FPM SAPI** (All bodies) | FastCGI requires `CONTENT_LENGTH`; chunked bodies unparsed | `IMMUNE: NO CHUNKED OOM` |
-| **In-band Cookie Leak** (ASLR On) | Discloses 47 free-list ptrs (chunk base); narrows `libphp` 1.88 MB | `NARROWED (NOT PINNED)` |
-| **Off + ASLR-on** (FPM + `mod_php`) | Worker exits (FPM) / State cleared by bailout (`mod_php`) | `ROUTE CLOSED (EVIDENCE)` |
+| **PHP-FPM SAPI** (Crash Isolation) | Worker aborts on OOM (`exit 70`); fresh worker spawned with clean heap | `NO COOKIE LEAK CHANNEL` |
+| **In-band Cookie Leak** (ASLR On) | Discloses 47 free-list ptrs (chunk base); narrows `libphp` 1.51 MB (387 pages) | `NARROWED (NOT PINNED)` |
+| **Persistent Workers** (`php -S` / `mod_php`) | Worker persists across OOM; allows Chain D forged `HashTable` -> `zif_system` | `FULL REMOTE RCE (VERIFIED)` |
+| **CVE-2026-115560** (Serializer Switch) | Switch from `php_binary` to `php` before `session_start()`; decode failure observed | `INFORMATIONAL (UNFIXED)` |
 
 ```
                         MEMORY ALLOCATOR GEOMETRY (Zend MM)

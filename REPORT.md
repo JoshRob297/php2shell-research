@@ -1,8 +1,8 @@
 # php2shell: technical report
 
-**CVE-2026-109618 / CVE-2026-109619**
+**CVE-2026-109618 / CVE-2026-109619 / CVE-2026-115560**
 
-Version 1.6, 2026-10-23. Prepared by **JoshRob**. Independent security research. No hostnames,
+Version 1.7, 2026-10-26. Prepared by **JoshRob**. Independent security research. No hostnames,
 addresses, credentials or customer data.
 
 Changelog: v1.1 documented the FPM stale-BG chain reproduction. v1.2 records the definitive crash
@@ -14,12 +14,14 @@ handler). v1.5 documents the controlled-write variant of the FPM stale-BG chain 
 full FPM command execution reached in the lab (section 5.5, section 9, `EVIDENCE.md` section
 10); the v1.2 retraction covered the residual-block reading, not this controlled variant. v1.6
 is an editorial revision: it labels the request-level arm E (decode failure + local file
-planting) and the FPM stale-`BG(unserialize)` chain E-OOM, and keeps the iteration history in
-this changelog; no measurement changes.
+planting) and the FPM stale-`BG(unserialize)` chain E-OOM. v1.7 integrates the post-mortem analysis
+and lab reproduction of the StealMyBitcoin challenge, documenting the SAPI architecture disambiguation
+(persistent CLI-server workers vs disposable FPM workers) and independent lab verification of Chain D
+(forged `HashTable` -> `zif_system`).
 
 ## 1. Executive summary
 
-`php2shell` is a cluster of vulnerabilities in PHP request startup. The two assigned CVEs cover
+`php2shell` is a cluster of vulnerabilities in PHP request startup. The three assigned CVEs cover
 related manifestations of state corruption caused by out-of-memory (OOM) conditions and bailout
 paths that do not fully unwind per-request state:
 
