@@ -16,6 +16,9 @@ A safe, non-destructive diagnostic CLI designed for systems administrators, inci
   - External public targets require explicit `--authorized` acknowledgment confirming written authorization.
   - Safe local inspection is supported via `--dry-run`.
 
+> [!TIP]
+> **Advanced Diagnostic Capabilities (Private Edition):** For vetted security research and internal laboratory audits, an extended multi-chain suite (`checker-pro`) resides in the private audit repository (`php2shell-audit/tools/checker-pro/`). It incorporates dedicated diagnostic oracles covering the full 5-chain attack surface (Chains A, B, C, D, E-OOM, and CVE-2026-115560) with active in-flight session streaming inspection, SAPI persistence profiling, and ASLR 387-page dispersion calculations without redistributing weaponized exploits.
+
 ---
 
 ## 2. Architecture & File Layout
