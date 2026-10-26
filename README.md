@@ -158,3 +158,15 @@ A Nextcloud 33.0.x test deployment (PHP 8.4.21, `mod_php` prefork) was used to v
 This material is for defensive research, patch verification and controlled testing. Do not use the described techniques against systems you do not own or have explicit authorization to test. For vulnerabilities in PHP itself, follow the PHP project security process.
 
 The lab proof-of-concept code is not part of this repository. It lives in a separate private, invite-only repository and is available on request from the author (JoshRob) to vetted reviewers. Public PoCs are referenced by URL in `POCS.md`.
+
+---
+
+## Evidencia de Laboratorio (Privado)
+
+Las capturas de verificacion del framework de explotacion (consola, resultados, tests) se almacenan en el repositorio privado `php2shell-pocs/evidence/`. El framework fue verificado contra:
+
+- PHP 8.4.26 (vulnerable) - mod_php, FPM, CLI-server
+- PHP 8.4.27 (parcheado) - mod_php, FPM, CLI-server
+- Suite de tests: 126 passed, 0 failed
+
+Para solicitar acceso a la evidencia visual, contactar al autor (JoshRob).
