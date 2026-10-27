@@ -58,6 +58,7 @@ instancia de PHP sea explotable con la misma PoC.
 | A con `strict=1` | Bloqueado en el caso medido |
 | `PS(serializer)` entre requests, FPM y `mod_php` | Sin handler stale |
 | E-OOM (FPM BG stale) en 8.4.26 | DoS determinista (SIGSEGV en `var_push`, 502) en la configuración por defecto; con el struct reclamado por el buffer del campo multipart (sesión plantada de 24 B), escritura controlada de 16 B en `sapi_module.ub_write` = `&system` y ejecución de comando en el lab (ASLR off, sesión plantada); 8.4.27 estable |
+| FPM Cadena E bajo ASLR activo | Sin canal de infoleak en FastCGI (0 punteros en stream crudo; delta timing < 0.2 ms); fragmentación de Zend MM bin-16 impide superposición remota sin ASLR off; desincronización de ABI en `ub_write` exige payload desacoplado (`kill -TERM $$`); clasificado como DoS determinista (P3) sin infoleak previo |
 
 ## Impacto
 

@@ -81,6 +81,16 @@ On FPM, payload A makes the worker exit (pool logs `child ... exited with code 7
 ### 4. The leak and the stale-`BG(unserialize)` primitive (E-OOM) are mutually exclusive
 This closes the remaining `Off` + ASLR-on route. On `mod_php` the E-OOM primitive exists in isolation (a decode OOM leaves `BG(unserialize)` at `level=1` with a dangling `data` pointer and the next decode reuses it without a crash), but payload A's OOM in `php_session_send_cookie` clears exactly that state (`level=0`), and the decode-OOM producer leaves no stale session id. One request cannot produce both states (the decode runs before the cookie is sent); separate requests destroy each other's.
 
+### 5. PHP-FPM Chain E: The FastCGI Leak Impossibility & ASLR Boundaries
+Empirical evaluation of the E-OOM primitive on PHP-FPM 8.4.26 (`fpmdbg` behind Nginx `ngdbg` on `:18088`) definitively closes the hypothesis of a universal, pre-auth remote RCE chain on FPM under ASLR-on:
+
+1. **FastCGI Suppresses Heap InfoLeaks**: Unlike Apache `mod_php`, the FastCGI communication layer (`fcgi_write` / `sapi_cgibin_ub_write`) isolates the stdout stream. Raw TCP socket captures confirmed that malformed multipart headers and aborted session decodes yield strictly clean HTTP headers with 0 pointers disclosed. Timing side-channels across differential payload bursts (10 B vs 100 KB) exhibited a sub-millisecond delta ($\Delta = 0.170\text{ ms}$), absorbed entirely by socket jitter and rendering remote ASLR entropy recovery impossible.
+2. **Deterministic Monoworker Affinity vs Slow-POST Pinning**: In single-worker pools (`pm.max_children = 1`), state retention in `basic_globals.unserialize` across requests is 100% deterministic (retaining dangling struct $d$ at `0x7fc72fc64000` with `level = 1`). For multi-worker pools (`pm.max_children > 1`), pairing between the Producer (OOM) and Consumer (Reclaim) requires saturating $N-1$ workers via Slow-POST streaming connections to force dispatch to the poisoned worker.
+3. **Zend MM Arena Fragmentation Under ASLR**: Although the arbitrary 16-byte write arithmetic ($T_2 = d + 0x110 + 16N$ to overwrite `&sapi_module.ub_write` with `&system`) is mathematically proven, active ASLR randomizes the `anon:zend_alloc` virtual base. As a result, Zend MM bin-16 page allocation fragments across requests, preventing the multipart field buffer (12,300 B) from landing precisely on the virtual address of the freed struct $d$.
+4. **Post-Exec ABI Desynchronization**: Hijacking `sapi_module.ub_write = &system` causes the engine's output layer to receive `rax = 0` (exit code of the subshell) instead of `length` bytes written, triggering an immediate `php_handle_aborted_connection` and HTTP 502 Bad Gateway. Reliable execution mandates decoupling payloads into background subshells (`foo; (cmd; kill -TERM $$) >/dev/null 2>&1 &`) so the command finishes and the FPM master recycles the damaged worker cleanly.
+
+**Verdict on FPM Chain E**: Under default ASLR-on conditions without a secondary infoleak or local LFI, Chain E is strictly a **deterministic Denial of Service (P3)** via worker crash. Remote RCE remains constrained to lab profiles with ASLR disabled (`setarch -R`) or environments where binary and heap bases are already known.
+
 ---
 
 ## Key results
