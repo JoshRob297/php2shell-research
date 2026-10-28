@@ -3,7 +3,7 @@
 # php2shell — Independent Verification & Exploitation Boundary Audit
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.0.0_(2026--10--24)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-v1.7.0_(2026--10--27)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0)
 [![Target](https://img.shields.io/badge/PHP_Targets-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRITICAL-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-1.88_MB_Window_(Not_Pinned)-d97706?style=flat-square)](#)
@@ -17,7 +17,7 @@
 ---
 </div>
 
-- **Status**: final public release v1.1.0, 2026-10-26 (allocator microarchitecture, chunked SAPI boundaries, FPM/mod_php route closures, and StealMyBitcoin post-mortem audit).
+- **Status**: final public release v1.7.0, 2026-10-27 (official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, and ASLR process-level boundary falsification).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
 - **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.

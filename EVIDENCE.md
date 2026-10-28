@@ -386,8 +386,12 @@ their arguments, and the `id` output: `raw/fpm-rce-ub-write.txt` (full run log).
 layout is exact: `C|i:<V>;AAAA` works; `hello|i:<V>;` (also 24 bytes) corrupts the layout
 before the write (SEGV in `tmp_var` without hitting the watchpoint).
 
-Prerequisites measured in the lab: ASLR off, a locally planted session file, and a symbol build
-for address calibration. The remote ASLR-on variant was not demonstrated.
+Measured laboratory baseline:
+- Symbol/debug build (`phpdebug:8.4.26-fpm`): `T2 = 0x555556ae2dd0` (`&sapi_module.ub_write`), `V = 0x7ffff7070090` (`&system`).
+- Official stock distribution image (`php:8.4.26-fpm` Debian 13 Bookworm/Trixie): `T2 = 0x555556ae1a30` (offset +0x30 from `sapi_module` at `0x555556ae1a00`), `V = 0x7ffff7096090` (`&system`).
+In both environments, the alignment condition (T2 - d - 0x110) % 16 == 0 is strictly met, triggering `WATCH_ub_write` and arbitrary command execution (`id > /tmp/pwned`).
+
+Prerequisites measured in the lab: ASLR disabled for the process tree via `setarch x86_64 -R`, a locally planted 24-byte session file (`C|i:<V>;AAAA`), and known/calibrated base addresses. Under default ASLR-on without an auxiliary infoleak, heap placement fragmentation and FastCGI stdout stream isolation degrade the chain strictly to a deterministic Denial of Service (P3).
 
 ## 11. Phase 2: `PS(id)` vs Session HashTable (in-band channel audit)
 

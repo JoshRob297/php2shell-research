@@ -17,7 +17,9 @@ is an editorial revision: it labels the request-level arm E (decode failure + lo
 planting) and the FPM stale-`BG(unserialize)` chain E-OOM. v1.7 integrates the post-mortem analysis
 and lab reproduction of the StealMyBitcoin challenge, documenting the SAPI architecture disambiguation
 (persistent CLI-server workers vs disposable FPM workers) and independent lab verification of Chain D
-(forged `HashTable` -> `zif_system`).
+(forged `HashTable` -> `zif_system`). v1.7.0 consolidates full empirical calibration across official stock
+distribution images (`php:8.4.26-fpm` Debian 13), measuring exact symbol offsets in uninstrumented builds,
+FastCGI stdout stream isolation falsification, and the process-level `setarch x86_64 -R` operational boundary.
 
 ## 1. Executive summary
 
@@ -339,8 +341,12 @@ the same vulnerability and not all are remote:
   `used_slots` turns the destructor walk into a 16-byte `{value, IS_LONG}` write at a chosen
   16-aligned address. The write was aimed at `sapi_module.ub_write`, replaced with the libc
   `system` entry, so each subsequent output chunk runs as a command. Command execution was
-  reached in the lab, with local prerequisites: ASLR off, a locally planted 24-byte session
-  file, and a symbol build for address calibration. It is not a remote ASLR-on exploit.
+  reached in the lab under reproducible conditions: process-level ASLR disabled (`setarch x86_64 -R`),
+  a locally planted 24-byte session file (`C|i:<V>;AAAA`), and calibrated offsets. While originally
+  tested on a symbol build, our subsequent verification confirmed identical exploitability on stock
+  production distribution images (`php:8.4.26-fpm` Debian 13 Bookworm/Trixie) with `&sapi_module.ub_write = 0x555556ae1a30`
+  (offset +0x30) and `&system = 0x7ffff7096090`. Under default ASLR-on, FastCGI stream isolation
+  and heap placement jitter degrade this vector strictly to a deterministic Denial of Service (P3).
 
 ### 5.6 Generalizability: PHP-level bug, deployment-specific exploitability
 
@@ -512,10 +518,12 @@ chains; those require the application/configuration controls above.
   (502) with a symbol build; the crash mechanism (allocator free-list encoding over `used_slots`)
   was verified with a hardware watchpoint. The residual `var_dtor_entries` block alone does not
   give an attacker-controlled write. When the dangling struct is reclaimed by the multipart
-  field buffer, the fake `var_dtor_entries` gives a controlled 16-byte write. With ASLR off and
-  a locally planted session file, that write reached `sapi_module.ub_write` and executed a
-  command as the web user (section 5.5). The remote ASLR-on variant was not demonstrated; the
-  `mod_php` chain remains the full remote-style RCE reproduction.
+  field buffer, the fake `var_dtor_entries` gives a controlled 16-byte write. With process-level
+  ASLR off (`setarch x86_64 -R`), calibrated offsets, and a locally planted session file, that write reached
+  `sapi_module.ub_write` and executed a command as the web user (verified on both debug and official stock
+  `php:8.4.26-fpm` images, section 5.5). The remote ASLR-on variant was falsified due to FastCGI stream isolation
+  and bin-16 allocator fragmentation; the `mod_php` chain and persistent-worker CLI server (Chain D) remain the
+  demonstrated full remote-style RCE reproductions.
 - The 8.5 `fatal_error_backtraces` arm and the OPcache SHM arm were tested with symbol builds
   and controlled differentials; neither reproduced as a memory-safety issue in the lab (see
   section 6).
