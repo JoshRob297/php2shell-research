@@ -1,5 +1,9 @@
 # Glossary
 
+[English](GLOSSARY.md) · [Español](GLOSSARY.es.md)
+
+---
+
 **ASLR** — Address Space Layout Randomization. Randomizes memory addresses to make code
 execution harder.
 

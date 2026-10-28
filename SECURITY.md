@@ -1,5 +1,9 @@
 # Security and responsible use
 
+[English](SECURITY.md) · [Español](SECURITY.es.md)
+
+---
+
 This repository is independent defensive research. It contains no exploit code and no
 infrastructure data.
 

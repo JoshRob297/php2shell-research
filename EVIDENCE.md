@@ -1,5 +1,9 @@
 # Evidence
 
+[English](EVIDENCE.md) · [Español](EVIDENCE.es.md)
+
+---
+
 Sanitized measurements from disposable lab containers. All traffic was loopback. Hostnames,
 addresses and private paths are omitted; the commands are reproducible with official PHP images.
 

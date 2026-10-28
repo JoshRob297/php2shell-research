@@ -1,5 +1,9 @@
 # Coverage matrix
 
+[English](COVERAGE.md) · [Español](COVERAGE.es.md)
+
+---
+
 Status definitions:
 
 - **fail**: the vulnerability or chain succeeded in the tested conditions.

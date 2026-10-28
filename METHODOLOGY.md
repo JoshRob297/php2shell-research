@@ -1,5 +1,9 @@
 # Methodology
 
+[English](METHODOLOGY.md) · [Español](METHODOLOGY.es.md)
+
+---
+
 ## Lab
 
 All experiments were performed on loopback interfaces with disposable containers and official

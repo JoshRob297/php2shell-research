@@ -1,5 +1,9 @@
 # Remediation
 
+[English](REMEDIATION.md) · [Español](REMEDIATION.es.md)
+
+---
+
 This document describes solutions to the vulnerability. It is not a deployment checklist for a
 specific environment.
 

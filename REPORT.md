@@ -1,5 +1,9 @@
 # php2shell: technical report
 
+[English](REPORT.md) · [Español](REPORT.es.md)
+
+---
+
 **CVE-2026-109618 / CVE-2026-109619 / CVE-2026-115560**
 
 Version 1.7, 2026-10-26. Prepared by **JoshRob**. Independent security research. No hostnames,

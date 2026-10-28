@@ -1,5 +1,9 @@
 # FAQ
 
+[English](FAQ.md) · [Español](FAQ.es.md)
+
+---
+
 ## Is upgrading to 8.4.27 enough?
 
 For the OOM/state-corruption class (the two CVEs), yes: 8.4.27 resets the stale state early and

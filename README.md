@@ -12,7 +12,7 @@
 **An exhaustive memory-allocator & microarchitecture study by JoshRob**  
 *Independent verification of public ASLR bypass claims, chunked POST boundaries, and Zend MM free-list heap disclosure.*
 
-[English](README.md) · [Español](RESUMEN.md)
+[English](README.md) · [Español](README.es.md)
 
 ---
 </div>
@@ -20,7 +20,7 @@
 - **Status**: final public release v1.7.0, 2026-10-27 (official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, and ASLR process-level boundary falsification).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
-- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
+- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `README.es.md`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
 - **AI-assisted**: multiple AI models and specialized subagents were used under human direction for review, lab orchestration and documentation checks; every finding was validated against commands, outputs or public sources. See `METHODOLOGY.md`.
 
 ## Executive summary
@@ -154,7 +154,7 @@ Reproduces the memory allocator geometry and `PS(id)` forward-window sweep under
 | Document / Asset | Description |
 |---|---|
 | [`REPORT.md`](REPORT.md) | Full technical report: root cause, exploitation model, impact, limitations |
-| [`RESUMEN.md`](RESUMEN.md) | Resumen ejecutivo en español |
+| [`README.es.md`](README.es.md) | Resumen ejecutivo en español |
 | [`EVIDENCE.md`](EVIDENCE.md) | Sanitized lab evidence, matrices and raw output excerpts (sections 1–13) |
 | [`tooling/checker/`](tooling/checker/) | Safe, non-destructive diagnostic CLI with prompt-injection defense |
 | [`tooling/`](tooling/) | `oom_reach.py`, `forged_cookie_check.py`, and instrumented labkit replica |
@@ -171,7 +171,7 @@ Reproduces the memory allocator geometry and `PS(id)` forward-window sweep under
 | [`LICENSE`](LICENSE) | CC BY 4.0 license notice |
 
 > [!TIP]
-> **Official Formatted PDF Release**: Formatted typography versions of `REPORT.md` (13 pages, A4) and `RESUMEN.md` (4 pages, A4) with verified checksums are available on the [v1.0.0 Release Page](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0).
+> **Official Formatted PDF Release**: Formatted typography versions of `REPORT.md` (13 pages, A4) and `README.es.md` (4 pages, A4) with verified checksums are available on the [v1.0.0 Release Page](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0).
 
 ---
 

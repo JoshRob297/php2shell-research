@@ -1,5 +1,9 @@
 # Public PoCs: review and independent verification
 
+[English](POCS.md) · [Español](POCS.es.md)
+
+---
+
 This document reviews the public proof-of-concept material available during the disclosure
 window. It does not redistribute third-party exploit code; links point to the original
 repositories. All execution was in a disposable lab, on loopback, against official PHP images.

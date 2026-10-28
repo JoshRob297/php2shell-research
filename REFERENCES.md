@@ -1,5 +1,9 @@
 # References
 
+[English](REFERENCES.md) · [Español](REFERENCES.es.md)
+
+---
+
 ## Primary
 
 - PHP advisory archive: https://www.php.net/archive/2026.php#2026-10-21-5
