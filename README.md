@@ -113,9 +113,12 @@ Empirical evaluation of the E-OOM primitive on PHP-FPM 8.4.26 (`fpmdbg` behind N
 
 ---
 
-## Defensive Tooling: php2shell-checker
+## Defensive Tooling & Lab Artifacts
 
-This repository provides **[`tooling/checker/`](tooling/checker/)**, an automated, strictly non-destructive diagnostic CLI designed for defensive operators to verify whether their PHP deployments meet the necessary conditions for request-startup exploitation:
+This repository provides reproducible defensive tooling, non-destructive scanners, and offline measurement calculators:
+
+### 1. Posture Diagnostic CLI: php2shell-checker (`tooling/checker/`)
+An automated, strictly non-destructive diagnostic CLI designed for defensive operators to audit whether target PHP deployments expose vulnerable request-startup conditions:
 
 ```bash
 # Verify posture against a local development endpoint
@@ -125,9 +128,24 @@ python3 tooling/checker/checker.py --url http://127.0.0.1:8080/ --local --verbos
 python3 tooling/checker/checker.py --url https://example.com/ping.php --authorized --json report.json --md report.md
 ```
 
-- **Guarantees:** Maximum 3 standard HTTP requests, total payload under 10 KB, zero memory exhaustion (OOM), and zero heap manipulation.
-- **Honeypot-Resistant:** Employs [`anti_injection.py`](tooling/checker/anti_injection.py) regex sanitizers to neutralize indirect prompt injections in headers and cookies for AI-assisted workflows.
-- See the [Checker Documentation](tooling/checker/README.md) for usage, configuration, and scoring matrix details.
+- **Safety Guarantees:** Strictly bounds execution to a maximum of 3 standard HTTP requests, total payload under 10 KB, zero memory exhaustion (OOM), and zero heap manipulation.
+- **Honeypot-Resistant:** Employs [`anti_injection.py`](tooling/checker/anti_injection.py) sanitizers to neutralize indirect prompt injections in headers and cookies for AI workflows.
+- **Documentation:** See the [Checker Documentation](tooling/checker/README.md) for configuration and scoring matrix details.
+
+### 2. Reproducible Verification Lab (`tooling/docker-compose.yml`)
+Stand up isolated, side-by-side verification environments binding strictly to loopback:
+```bash
+docker compose -f tooling/docker-compose.yml up -d
+# Vulnerable 8.4.26 container -> http://127.0.0.1:18080/
+# Patched 8.4.27 container    -> http://127.0.0.1:18081/
+```
+
+### 3. Allocator Measurement Labkit (`tooling/labkit/`)
+Reproduces the memory allocator geometry and `PS(id)` forward-window sweep under controlled GDB introspection. See [Labkit Documentation](tooling/labkit/README.md).
+
+### 4. Offline Reachability & Cookie Calculators
+- `tooling/oom_reach.py`: Evaluates whether a given `(memory_limit, post_max_size)` pair can theoretically trigger an OOM bailout under standard RFC 1867 multipart parsing.
+- `tooling/forged_cookie_check.py`: Inspects HTTP response headers for non-standard base64/hex bytes indicating Zend MM bin-64 free-list disclosure.
 
 ---
 

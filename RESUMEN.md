@@ -114,6 +114,19 @@ de explotación exitosa de las dos CVEs antes de la publicación.
 Nota: el código de PoC del laboratorio vive en un repositorio privado e invite-only, disponible
 bajo pedido al autor; aquí solo hay documentación y enlaces.
 
+## Herramientas defensivas y artefactos de laboratorio
+
+- **[`tooling/checker/`](tooling/checker/)**: CLI de diagnóstico no destructivo para auditar
+  la postura de seguridad de un despliegue PHP sin riesgo de OOM, alteración del heap, ni efectos secundarios
+  (máximo 3 peticiones HTTP acotadas y protección anti-prompt injection).
+- **[`tooling/docker-compose.yml`](tooling/docker-compose.yml)**: Laboratorio local reproducible
+  para comparar lado a lado `8.4.26` vulnerable y `8.4.27` parchada en loopback.
+- **[`tooling/labkit/`](tooling/labkit/)**: Kit de instrumentación y trazado con GDB para reproducir
+  la geometría de memoria del allocator Zend MM y la ventana del cookie forward.
+- **[`detection/`](detection/)**: Reglas Suricata 8 y Sigma para detectar explotación y payloads mutados.
+- **`tooling/oom_reach.py`**: Calculadora offline de alcanzabilidad de OOM según `memory_limit` y `post_max_size`.
+- **`tooling/forged_cookie_check.py`**: Inspector de cabeceras HTTP para identificar filtración de free-lists bin-64.
+
 ## Documentos
 
 - `REPORT.md`: informe técnico completo.
