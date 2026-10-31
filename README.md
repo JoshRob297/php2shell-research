@@ -14,6 +14,8 @@
 
 [English](README.md) · [Español](README.es.md)
 
+Contact: Telegram [@JocesLab](https://t.me/JocesLab) · email [joshrob.sec@proton.me](mailto:joshrob.sec@proton.me) — private repository access and related discussion ([`CONTACT.md`](CONTACT.md)).
+
 ---
 </div>
 
@@ -171,6 +173,7 @@ cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
 | [`raw/`](raw/) | Redacted raw lab captures backing the OOM/ASLR rows |
 | [`METHODOLOGY.md`](METHODOLOGY.md) | Lab setup, application scope, AI/subagent workflow and reproducibility |
 | [`POCS.md`](POCS.md) | Public PoCs reviewed and independent verification results |
+| [`CONTACT.md`](CONTACT.md) | Private repository access requests and related discussion |
 | [`REMEDIATION.md`](REMEDIATION.md) | Vendor patch, configuration hardening, detection and verification |
 | [`COVERAGE.md`](COVERAGE.md) | Test matrix by CVE, chain, version and status |
 | [`FAQ.md`](FAQ.md) | Common questions and scope clarifications |

@@ -14,6 +14,8 @@
 
 [English](README.md) · [Español](README.es.md)
 
+Contacto: Telegram [@JocesLab](https://t.me/JocesLab) · correo [joshrob.sec@proton.me](mailto:joshrob.sec@proton.me) — acceso al repositorio privado y discusión relacionada ([`CONTACT.md`](CONTACT.md)).
+
 ---
 </div>
 
@@ -172,6 +174,7 @@ cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
 | [`validation/`](validation/) | Matriz sanitizada `PS(id)` vs HashTable y geometría de memoria |
 | [`detection/`](detection/) | Reglas Suricata 8 y Sigma para detección de anomalías y firmas |
 | [`raw/`](raw/) | Salidas crudas redactadas que respaldan las pruebas de laboratorio |
+| [`CONTACT.md`](CONTACT.md) | Solicitudes de acceso al repositorio privado y discusión relacionada |
 
 ---
 
