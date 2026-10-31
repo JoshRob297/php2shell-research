@@ -21,7 +21,7 @@ not redistribute them.
 
 | Repository | What it is | Independent result |
 |---|---|---|
-| `9bie/php2shell-bypass-aslr-exp` | Python ASLR-bypass exploit, standard library only | Functional in the lab: 8/8 with ASLR on, 5/5 with ASLR off; host-layout dependent |
+| `9bie/php2shell-bypass-aslr-exp` | Python ASLR-bypass exploit, standard library only | Functional in the lab: 8/8 with ASLR on, 5/5 with ASLR off, `display_errors=On`; 0/3 with `display_errors=Off` and ASLR on (author reports 10/10 on the stock 128M/150-worker profile); host-layout dependent |
 | `ikow/php2shell-poc` | Five chains; A/B/C public, D/E with public verification scripts and paid full exploits | A/B/C readable and testable; D/E verification public; full D/E not public |
 | `GoldraK/php2shell-poc` | Fork/rewrite by the same author; A/C/E scanner, lab and rules | Scanner reports 24/24 vulnerable; measures A/C/E, not the OOM chain |
 | `dinosn/php-cve-2026-10961x-lab-poc` | Lab with instrumented allocator | Lab-assisted; uses `USE_ZEND_ALLOC=0`; not a universal remote PoC |
@@ -47,9 +47,17 @@ not redistribute them.
 - Python 3, standard library, no external hosts.
 - The exploit targets the OOM/state-corruption chain and includes an ASLR bypass.
 - In our lab it produced `uid=33(www-data)` on 8/8 runs with ASLR on and 5/5 runs with ASLR
-  off.
+  off (raw: `raw/9bie-aslr-on-8run.txt`; the 8 ASLR-on runs used 8 distinct chunk and `libphp`
+  bases; `raw/9bie-aslr-off-5run.txt`; one base across all 5 off runs). In the same lab profile with
+  `display_errors=Off` and ASLR on it stops at stage 1 in 0/3 runs
+  (`raw/9bie-display-off-3run.txt`); the author's 128M/150-worker Off profile was not
+  reproduced here.
 - The earlier 0/49 "Off" sweep was a harness bug: stage A was sent to the wrong port while
   stage B hit the container port. It was not a PoC failure.
+- The author's published run uses the official profile (`php.ini-production`,
+  `display_errors=Off`, `memory_limit=128M`, `MaxRequestWorkers=150`) and reports 10/10 on
+  x86_64 and aarch64. Our 8/8 and 5/5 runs used the lab profile (single worker,
+  `memory_limit=8M`, `display_errors=On`); the 150-worker stock profile was not re-run here.
 - Caveat: the chain depends on host/kernel allocator layout. The same public exploit did not
   reproduce on every host tested; the exploit is not universal without calibration.
 
@@ -123,7 +131,7 @@ See `EVIDENCE.md` for the full matrices. The short version:
 
 - 8.4.26 `mod_php`, `display_errors=On`, ASLR on: RCE 3/3.
 - 8.4.26 `mod_php`, `display_errors=Off`, ASLR off: RCE 3/3.
-- 8.4.26 `mod_php`, `display_errors=Off`, ASLR on: controlled repetitions 0/3; the 4000-byte cookie is state-dependent and over-reads into heap objects (47 pointer-like values per run); no session-table read, and the chunk-to-libphp distance varies 1.88 MB (fixed page offset, ~481 pages).
+- 8.4.26 `mod_php`, `display_errors=Off`, ASLR on: our cookie-only chain gave controlled repetitions 0/3; the 4000-byte cookie is state-dependent and over-reads into heap objects (47 pointer-like values per run); no session-table read, and the chunk-to-libphp distance varies 1.88 MB (fixed page offset, ~481 pages). The 9bie chain reaches RCE on the same build with ASLR on (see the 9bie entry above).
 - Chain D (mod_php stale EG + forged `zend_object` spray -> `zif_system`): described in
   `ikow/php2shell-poc` `docs/ANALYSIS.md` (sections 3.5/3.6); the exploit scripts were not
   public at review time. We independently confirmed its OOM precondition (chunked

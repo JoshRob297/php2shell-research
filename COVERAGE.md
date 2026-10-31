@@ -19,9 +19,9 @@ Status definitions:
 | OOM abort / heap corruption | affected by version; not exploited | fail | pass | pass (0/3) | 8.4.27 control: 0/5, no aborts; fixed branches blocked at stage 1 |
 | RCE, `display_errors=On`, ASLR on | not tested | fail (3/3) | pass (0/5) | pass (0/3) | mod_php prefork; control rerun 3/3 in the same harness |
 | RCE, `display_errors=Off`, ASLR off | not tested | fail (3/3) | pass | not tested here | offset-calibrated build; fixed branches not exercised in this profile |
-| RCE, `display_errors=Off`, ASLR on | not tested | not stable (controlled 0/3) | pass | not tested | 12/12 claim withdrawn; cookie state-dependent |
+| RCE, `display_errors=Off`, ASLR on | not tested | not achieved: cookie-only chain 0/3 controlled; 9bie chain also 0/3, stops at stage 1 (its 8/8 needs `display_errors=On`) | pass | not tested | 12/12 claim withdrawn; the 4000-byte cookie is state-dependent, and the 0xC8000 read needs error output for stage 1 |
 | FPM session decode OOM / stale BG | not tested | deterministic UAF crash (502) verified with watchpoint; with the multipart-reclaimed struct, controlled 16-byte write to `sapi_module.ub_write` = `&system` -> command execution in the lab | not tested | not tested | CVE-2026-109619; default mechanism = allocator free-list encoding over `used_slots`; controlled variant = fake `var_dtor_entries` (ASLR off, planted 24-byte session); 8.4.27 stable (early reset) |
-| Memory disclosure via cookie | not tested | partial (4000-byte cookie discloses heap pointers; session table not reachable; libphp narrowed ~1.88 MB, not pinned) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
+| Memory disclosure via cookie | not tested | partial (4000-byte cookie discloses heap pointers; session table not reachable; libphp narrowed ~1.88 MB at that read size, pinned with a `len=0xC8000` forged `zend_string` -- 9bie chain, 8/8 ASLR-on reproduced) | pass | pass (0/3) | geometry-dependent; fixed branches: leak not reproducible |
 | CVE-2026-115560 (informational, 2026-10-23) | not tested | not tested | not fixed | not tested | narrow condition (config `php_binary`/`php_serialize` + runtime `ini_set()` switch to `php`); mitigation `session.upload_progress.enabled=0` |
 
 Fixed branches 8.3.36 and 8.2.35 (same harness, 3 runs each): 0/3, blocked at stage 1 (heap
@@ -59,7 +59,7 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 
 | PoC | Claim | Independent status |
 |---|---|---|
-| 9bie | ASLR bypass / RCE | pass in the lab; host-layout dependent |
+| 9bie | ASLR bypass / RCE | pass in the lab with `display_errors=On` (8/8 ASLR-on, 8 distinct bases; 5/5 off, 1 base); 0/3 with `display_errors=Off` + ASLR on in the same lab profile; `raw/9bie-aslr-on-8run.txt`, `raw/9bie-aslr-off-5run.txt`, `raw/9bie-display-off-3run.txt`; author reports 10/10 on the stock 150-worker profile; host-layout dependent |
 | ikow A/B/C | chains | readable; A/C need prerequisites; B local |
 | ikow D/E | verification scripts | public; full exploits not public |
 | GoldraK A/C/E scanner | 24/24 vulnerable | pass for A/C/E; does not measure OOM; 8.4.27 omitted from the table |
@@ -71,7 +71,7 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 
 | Layer | What was tested | Generalization |
 |---|---|---|
-| Official `php:8.4.26-apache` | RCE 3/3 On/ASLR on; 3/3 Off/ASLR off; 0/3 Off/ASLR on | PHP-level primitive; build/allocator dependent |
+| Official `php:8.4.26-apache` | RCE 3/3 On/ASLR on; 3/3 Off/ASLR off; cookie-only chain 0/3 Off/ASLR on, 9bie chain 8/8 with ASLR on and 0/3 with ASLR on + `display_errors=Off` | PHP-level primitive; build/allocator dependent |
 | Official `php:8.4.27-apache` | 0/5 control | Patch for the OOM class |
 | Nextcloud 33.0.x test deployment, PHP 8.4.21 `mod_php` | Version/config validated; RCE not executed | App-independent primitive; deployment-specific |
 | FPM A/C/E | RCE with lab prerequisites | App/config-dependent |
@@ -87,11 +87,13 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
 - The 8.5 backtraces arm and the OPcache arm were tested and did not reproduce as
   memory-safety issues in the lab.
 - The 12/12 and 15/15 cookie counts were withdrawn: controlled repetitions on the official image gave 0/3 (ASLR on) and 0/3 (ASLR off); the 4000-byte cookie is state-dependent.
-- `Off` + ASLR-on RCE was not achieved. The forged cookie discloses heap (id chunk base) but
-  never the session HashTable and narrows `libphp` to a 1.88 MB window without pinning it; the
-  channel is single-shot per OOM and `mod_php`-only, and on `mod_php` the leak and the
-  stale-`BG(unserialize)` primitive are mutually exclusive. Both mechanisms were tested and
-  closed.
+- `Off` + ASLR-on RCE was not achieved **with our cookie-only chain**. The forged cookie
+  discloses heap (id chunk base) but never the session HashTable, and at the 4000-byte read it
+  narrows `libphp` to a 1.88 MB window. A larger OOB read (`len=0xC8000` forged `zend_string`)
+  pins `libphp` and the 9bie chain reaches RCE with ASLR on; we replicated it 8/8 ASLR-on and
+  5/5 off. What stays closed in our measurements is the combination: the channel is single-shot
+  per OOM and `mod_php`-only, and on `mod_php` the leak and the stale-`BG(unserialize)`
+  primitive are mutually exclusive.
 - Kernel/allocator portability is not solved; public PoC results vary by host.
 - A/C/E prerequisites are application-specific; the matrix records the lab conditions, not a
   universal exploitability claim.

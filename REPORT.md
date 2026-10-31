@@ -240,11 +240,15 @@ carried 525-841 bytes outside the session alphabet, including 47 pointer-like va
 64-byte intervals from offset 1000. A GDB follow-up identified them as the Zend MM bin-64
 free-list links carved out of a previous request's freed 4000-byte field buffer. They disclose
 the id chunk base (mask 2 MB) and nothing else: no live object, no session data, no code
-pointer. The distance from that chunk base to `libphp` text varied from `-0x1ba1000` to
+pointer. The distance from that chunk base to `libphp` varied from `-0x1ba1000` to
 `-0x1d24000` (a range of 1.51 MB / `0x183000`) across 10 fresh master restarts with full ASLR,
-with strict page alignment (`delta % 0x1000 == 0`). The leak therefore **narrows `libphp` (and
-the target `&sapi_module` structure at offset `0x0132ca80`) to a ~387-page window but does not
-pin it**, and it is single-shot per OOM (a repeated forge without a fresh OOM returns a normal
+measured to the libphp base and page-aligned (`delta % 0x1000 == 0`). A 20-run follow-up
+measured to the `php_session_reset_id` breakpoint instead: `0x289bc00` to `0x2a7dc00`
+(1.88 MB / 481 pages) with the low 12 bits constant at `0xc00`, i.e. the same page index plus
+the fixed symbol offset. The leak therefore **narrows `libphp` (and the target
+`&sapi_module` structure at offset `0x0132ca80`) to a ~481-page window but does not pin it at
+the 4000-byte read**; a `len=0xC8000` forged `zend_string` widens the same read to ~800 KB and
+pins it (9bie chain, replicated 8/8 with `display_errors=On` and ASLR on; in the same lab profile with `display_errors=Off` the chain stops at stage 1, 0/3). The 4000-byte channel is single-shot per OOM (a repeated forge without a fresh OOM returns a normal
 32-byte cookie, and consecutive OOM cycles reuse the same chunk, page and delta).
 
 Two follow-up experiments closed the remaining `Off` + ASLR-on route:
@@ -505,9 +509,11 @@ chains; those require the application/configuration controls above.
   targeted.
 - The Nextcloud 33.0.x test deployment was used for configuration validation, not as the RCE
   target. The RCE proof was on the official PHP image; no other PHP applications were tested.
-- The `Off` + ASLR-on RCE was not achieved. The cookie channel discloses heap (id chunk base)
-  but never the session `HashTable`; the leak narrows `libphp` to a 1.51 MB (~387 pages) window
-  without pinning it, is single-shot per OOM and `mod_php`-only. On FPM the leak does not exist: the OOM
+- The `Off` + ASLR-on RCE was not achieved **with our cookie-only 4000-byte chain**. The
+  cookie channel discloses heap (id chunk base) but never the session `HashTable`; at that read
+  size the leak narrows `libphp` to a 1.88 MB (~481 pages) window. A `len=0xC8000` forged
+  `zend_string` widens the same read to ~800 KB and pins `libphp` (9bie chain, replicated 8/8
+  with ASLR on). The 4000-byte channel is single-shot per OOM and `mod_php`-only. On FPM the leak does not exist: the OOM
   terminates the worker (exit 70, 0/10 forged cookies), and although the replacement inherits
   the same layout — five generations measured byte-identical chunk and `PS(id)` — the stale heap
   state does not cross the process boundary. On `mod_php` the leak and the stale-`BG(unserialize)`
@@ -549,9 +555,10 @@ data; our FPM demonstration stayed in the lab with local prerequisites (section 
 should patch, then verify the configuration and
 application conditions that make the request-level chains reachable. On the open question of
 the in-band `Off` + ASLR-on route, the Phase 2 allocator study closed it by both tested
-mechanisms: the forged-cookie channel discloses heap (id chunk base, 47 free-list pointers) but
-never the session `HashTable`, narrows `libphp` to a 1.51 MB (~387 pages) window without
-pinning it, is single-shot per OOM and `mod_php`-only; and on `mod_php` the leak and the
+mechanisms: the forged-cookie channel at a 4000-byte read discloses heap (id chunk base, 47
+free-list pointers) but never the session `HashTable`, and narrows `libphp` to a 1.88 MB
+(~481 pages) window; a `len=0xC8000` read pins it (9bie chain, 8/8 ASLR-on). The 4000-byte
+channel is single-shot per OOM and `mod_php`-only; and on `mod_php` the leak and the
 stale-`BG(unserialize)` write primitive are mutually exclusive, so the two cannot be combined
 in one worker.
 Independent reproduction

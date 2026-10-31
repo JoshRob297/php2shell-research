@@ -9,7 +9,10 @@ or user data are included.
 | `evidence-vuln-8426.txt` | 8.4.26 OOM/abort evidence (EVIDENCE section 2) |
 | `evidence-fixed-8427.txt` | 8.4.27 control, no aborts (EVIDENCE section 2) |
 | `evidence-aslr-diff.txt` | ASLR off/on leak and proof counts (EVIDENCE section 2) |
-| `rce-on-aslr-on-8426.txt` | Final validation, 8.4.26 RCE, `display_errors=On`, ASLR on: 3/3 `uid=33` |
+| `rce-on-aslr-on-8426.txt` | Final validation, 8.4.26 RCE, `display_errors=On`, ASLR on: 3/3 `uid=33`, stage 2 resolves `libphp` |
+| `9bie-aslr-on-8run.txt` | 9bie chain, 8 runs with the container restarted before each run: 8/8 `uid=33`, 8 distinct chunk and `libphp` bases |
+| `9bie-aslr-off-5run.txt` | 9bie chain, 5 runs with ASLR disabled (`setarch x86_64 -R`): 5/5 `uid=33`, 1 chunk base and 1 `libphp` base across all runs |
+| `9bie-display-off-3run.txt` | 9bie chain with `display_errors=Off` and ASLR on: 0/3, every run stops at stage 1 (`HEAP_LEAK_FAILED`) |
 | `ctl-8427.txt` | Final validation, 8.4.27 control, 5 runs: `HEAP_LEAK_FAILED`, no aborts |
 | `ace-8427.txt` | Final validation, A/C/E on 8.4.27-fpm: RCE `uid=33` |
 | `ace-8512.txt` | Final validation, A/C/E on 8.5.12-fpm: RCE `uid=33` |

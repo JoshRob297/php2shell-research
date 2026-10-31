@@ -430,11 +430,22 @@ Findings:
    each 64-byte chunk starts with the next link and keeps the attacker's fill
    byte in the rest. No live object, session data or code pointer is disclosed;
    the chunk base is recoverable by masking.
-3. **libphp is narrowed, not pinned.** Across 20 ASLR-on runs the
-   chunk-base-to-libphp distance ranged from `0x289bc00` to `0x2a7dc00`
-   (1.88 MB) with the low 12 bits constant (`delta % 0x1000 == 0xc00`): the
-   page offset is fixed and only the page index (~481 pages) is unknown. The
-   disclosure does not deterministically defeat ASLR for code pointers.
+3. **At the 4000-byte read libphp is narrowed; a larger read pins it.** Across
+   20 ASLR-on runs the chunk-base-to-libphp distance ranged from `0x289bc00` to
+   `0x2a7dc00` (1.88 MB) with the low 12 bits constant
+   (`delta % 0x1000 == 0xc00`): the page offset is fixed and only the page index
+   (~481 pages) is unknown. At this read size the disclosure does not
+   deterministically defeat ASLR for code pointers. With a forged `zend_string`
+   of `len=0xC8000` the same cookie returns ~800 KB and stage 2 prints the
+   resolved `libphp` base (`raw/rce-on-aslr-on-8426.txt`); that variant is
+   `9bie/php2shell-bypass-aslr-exp`, replicated 8/8 with ASLR on and 5/5 with
+   ASLR off in the lab profile (`raw/9bie-aslr-on-8run.txt`: container restarted
+   before each run, 8/8 `uid=33`, 8 distinct chunk and `libphp` bases;
+   `raw/9bie-aslr-off-5run.txt`: `setarch x86_64 -R`, 5/5 `uid=33`, one chunk
+   base and one `libphp` base across all runs). The 8/8 and 5/5 sweeps used
+   `display_errors=On`; in the same lab profile with `display_errors=Off` and ASLR
+   on the chain stops at stage 1 in 0/3 runs (`raw/9bie-display-off-3run.txt`); the
+   author's 128M/150-worker Off profile was not reproduced here.
 4. **`pd_dummy` shows the contrast.** Its destructor test overwrites the
    over-read region with zeros: 3000 NUL bytes and no pointers.
 5. **Single-shot per OOM, no entropy accumulation.** A second forged request

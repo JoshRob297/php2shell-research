@@ -77,14 +77,24 @@ The probe logged `php_session_reset_id` (the in-memory id pointer) and
    exception (no pointers): its object layout overwrites the over-read region
    with zeros.
 
-6. **The leak narrows libphp, it does not pin it.** In a 20-run follow-up on the
+6. **At the 4000-byte read the leak narrows libphp; a larger read pins it.** In a 20-run follow-up on the
    same point, the distance from the chunk base to libphp text (the
    `php_session_reset_id` breakpoint address) ranged from `0x289bc00` to
    `0x2a7dc00` (1.88 MB), with 19 distinct values and the low 12 bits constant
    (`delta % 0x1000 == 0xc00`). The page offset is therefore fixed and the
-   unknown is the page index (~481 pages). The disclosure does not
-   deterministically defeat ASLR for libphp; whether the window is usable
-   depends on the build and on other primitives, and was not demonstrated.
+   unknown is the page index (~481 pages). At this read size the disclosure does
+   not deterministically defeat ASLR for libphp, which is why an earlier revision
+   called the channel closed. With a forged `zend_string` of `len=0xC8000` the
+   same cookie returns ~800 KB and stage 2 resolves `libphp`
+   (`raw/rce-on-aslr-on-8426.txt`); that variant is
+   `9bie/php2shell-bypass-aslr-exp`, replicated 8/8 with ASLR on and 5/5 with
+   ASLR off (`raw/9bie-aslr-on-8run.txt`, 8 distinct bases across 8 restarts;
+   `raw/9bie-aslr-off-5run.txt`, one base across 5 restarts). Both sweeps ran
+   with `display_errors=On`; with `display_errors=Off` and ASLR on the same
+   chain fails at stage 1 in 0/3 runs in the same lab profile
+   (`raw/9bie-display-off-3run.txt`); the author's 128M/150-worker Off profile
+   was not reproduced here. What is not usable is the 4000-byte read alone, not
+   the channel.
 
    Correction: an earlier version of this file and of the matrix said the
    cookie leaked zero bytes. That was measured on the `pd_dummy` replication

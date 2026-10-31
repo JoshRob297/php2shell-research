@@ -72,8 +72,12 @@ build de depuración está en [`../tooling/labkit/README.es.md`](../tooling/labk
 
 - Las mediciones valen para los digests exactos de imagen listados en `EVIDENCE.es.md`. Otro
   build, asignador o kernel cambia la geometría.
-- Bajo ASLR, el canal in-band de la cookie acota `libphp` a una ventana de ~1.88 MB pero no la
-  fija; la vía FPM no expone fuga in-band alguna. Son límites medidos, no carencias de ajuste.
+- Bajo ASLR, el canal in-band de la cookie con lectura de 4000 B acota `libphp` a una ventana
+  de ~1.88 MB; un `zend_string` forjado de `len=0xC8000` amplía la misma lectura a ~800 KB y lo
+  fija (cadena 9bie, replicada 8/8 con ASLR On y `display_errors=On`; `../raw/9bie-aslr-on-8run.txt`; en el
+  mismo perfil de laboratorio, con `display_errors=Off` la cadena se detiene en la etapa 1,
+  `../raw/9bie-display-off-3run.txt`). La vía FPM no expone fuga in-band alguna. Son
+  límites medidos, no carencias de ajuste.
 - El watchpoint de E-OOM en FPM se incluye porque es la evidencia del veredicto DoS/P3. El
   builder de payload y el bucle de ejecución automatizado no se incluyen, deliberadamente.
 

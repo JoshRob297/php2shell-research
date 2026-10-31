@@ -3,10 +3,10 @@
 # php2shell — Independent Verification & Exploitation Boundary Audit
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.7.0_(2026--10--27)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-v1.9.0_(2026--10--31)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.9.0)
 [![Target](https://img.shields.io/badge/PHP_Targets-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRITICAL-b91c1c?style=flat-square)](#)
-[![ASLR](https://img.shields.io/badge/ASLR-1.88_MB_Window_(Not_Pinned)-d97706?style=flat-square)](#)
+[![ASLR](https://img.shields.io/badge/ASLR-Cookie_Window_1.88_MB-d97706?style=flat-square)](#)
 [![PDF](https://img.shields.io/badge/Download-Technical_Report_(PDF)-059669?style=flat-square&logo=adobeacrobatreader)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0)
 
 **An exhaustive memory-allocator & microarchitecture study by JoshRob**  
@@ -17,7 +17,7 @@
 ---
 </div>
 
-- **Status**: final public release v1.7.0, 2026-10-27 (official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, and ASLR process-level boundary falsification).
+- **Status**: public release v1.9.0, 2026-10-31 (official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, ASLR process-level boundary measurement, and the published measurement harness).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
 - **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `README.es.md`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
@@ -47,8 +47,8 @@ The key technical boundaries established by empirical lab falsification:
 | **Unpatched `mod_php`** (Chunked) | `post_max_size` bypassed; chunked ~64M+ body triggers startup OOM | `VULN: STARTUP OOM (500)` |
 | **Patched 8.4.27 / 8.5.12** (Chunked) | Enforced: `Actual POST length does not match Content-Length` | `PATCHED: BODY BOUNDED` |
 | **PHP-FPM SAPI** (Crash Isolation) | Worker aborts on OOM (`exit 70`); fresh worker spawned with clean heap | `NO COOKIE LEAK CHANNEL` |
-| **In-band Cookie Leak** (ASLR On) | Discloses 47 free-list ptrs (chunk base); narrows `libphp` 1.51 MB (387 pages) | `NARROWED (NOT PINNED)` |
-| **Persistent Workers** (`php -S` / `mod_php`) | Worker persists across OOM; allows Chain D forged `HashTable` -> `zif_system` | `FULL REMOTE RCE (VERIFIED)` |
+| **In-band Cookie Leak** (ASLR On) | Discloses 47 free-list ptrs (chunk base); narrows `libphp` to 1.88 MB (481 pages) at a 4000-byte read; a 0xC8000 read pins it (9bie chain, 8/8) | `NARROWED AT 4000 B` |
+| **Persistent Workers** (`php -S` / `mod_php`) | Worker persists across OOM; the forged-`HashTable` -> `zif_system` chain reaches command execution (not the stale-`EG` variant, see COVERAGE) | `FULL REMOTE RCE (VERIFIED)` |
 | **CVE-2026-115560** (Serializer Switch) | Switch from `php_binary` to `php` before `session_start()`; decode failure observed | `INFORMATIONAL (UNFIXED)` |
 
 ```
@@ -73,7 +73,7 @@ Standard out-of-the-box PHP configurations use `memory_limit = 128M` and `post_m
 
 ### 2. The Session HashTable is out of the cookie window, but the channel leaks heap
 Using non-intrusive GDB worker probing (`php_session_reset_id` & `php_session_track_init`), we tracked `PS(id)` and session `HashTable` allocations across requests. Due to the LIFO release order of superglobals, the `HashTable` is consistently positioned **before** the `PS(id)` pointer or separated across different 2 MB allocator chunks (delta > 4.5 MB), so the forward cookie window cannot reach session data. Testing with custom destructor objects (`pDestructor`) confirmed that userland destructor ordering cannot reorder the pre-request allocations done during `rfc1867_post_handler`.  
-The forged cookie does over-read past its own filler: the measured 4000/5000-byte values carry 525-841 bytes outside the session alphabet, including **47 pointer-like values** inside the id's 2 MB chunk (Zend MM bin-64 free-list links), disclosing the chunk base. The distance from that base to libphp text varied between `0x289bc00` and `0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant (`delta % 0x1000 == 0xc00`), so the leak **narrows libphp to a ~481-page window but does not pin it**. This is a heap-disclosure primitive, not the session-table read and not a demonstrated full ASLR bypass. See `validation/`.
+The forged cookie does over-read past its own filler: at the 4000/5000-byte read size the measured values carry 525-841 bytes outside the session alphabet, including **47 pointer-like values** inside the id's 2 MB chunk (Zend MM bin-64 free-list links), disclosing the chunk base. The distance from that base to libphp text varied between `0x289bc00` and `0x2a7dc00` (1.88 MB) across 20 ASLR-on runs, with the low 12 bits constant (`delta % 0x1000 == 0xc00`), so **at this read size** the leak narrows libphp to a ~481-page window without pinning it. That is a property of the 4000-byte read, not of the channel: with a forged `zend_string` of `len=0xC8000` and `display_errors=On` the same cookie returns ~800 KB and the chain pins libphp. `9bie/php2shell-bypass-aslr-exp` reports 10/10 on the stock profile; under `display_errors=On` we replicated the chain 8/8 with ASLR on and 5/5 with ASLR off, while under `display_errors=Off` with ASLR on it stops at stage 1 in 0/3 runs in the same lab profile (`raw/9bie-display-off-3run.txt`); the author's 128M/150-worker Off profile was not reproduced here (`POCS.md`, 9bie entry; raw sweeps `raw/9bie-aslr-on-8run.txt` and `raw/9bie-aslr-off-5run.txt`, stage-2 base resolution in `raw/rce-on-aslr-on-8426.txt`). The session-table read remains unreachable and the channel stays `mod_php`-only and single-shot per OOM. See `validation/`.
 
 ### 3. The leak channel is `mod_php`-only
 On FPM, payload A makes the worker exit (pool logs `child ... exited with code 70`, nginx returns 502); the follow-up request runs in a new process with a fresh 32-byte id and never reuses the stale one.
@@ -99,7 +99,7 @@ Empirical evaluation of the E-OOM primitive on PHP-FPM 8.4.26 (`fpmdbg` behind N
 |---|---|---|:---:|:---:|
 | `mod_php` 8.4.26 | `display_errors=On` · ASLR On | Pre-auth Remote Code Execution | `CRITICAL (3/3)` | Section 2 |
 | `mod_php` 8.4.26 | `display_errors=Off` · ASLR Off | Remote Code Execution via static offsets | `HIGH (3/3)` | Section 2 |
-| `mod_php` 8.4.26 | `display_errors=Off` · ASLR On | Heap Disclosure (1.88 MB Window narrowed, not pinned) | `MITIGATED` | Section 11 |
+| `mod_php` 8.4.26 | `display_errors=Off` · ASLR On | Cookie-only chain: heap disclosure at 4000 B (1.88 MB window), 0/3 RCE. 9bie chain: 0/3 in the lab profile, stops at stage 1 (`raw/9bie-display-off-3run.txt`) | `NOT ACHIEVED` | Section 11 |
 | FPM 8.4.26 (Cookie Leak) | Single-worker pool | Worker aborts on OOM (`exit 70`, 502); fresh worker gets fresh 32B SID | `NO CHANNEL` | Section 11 |
 | `mod_php` (Leak + E-OOM) | Single-worker pool | Bailout clears `BG(unserialize)`; states mutually exclusive | `ROUTE CLOSED` | Section 11 |
 | CVE-2026-115560 | `php_binary` config + runtime `ini_set()` | Bounded attempt: decode failure observed, no memory safety impact | `INCONCLUSIVE` | Section 12 |

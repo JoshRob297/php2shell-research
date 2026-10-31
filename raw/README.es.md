@@ -11,7 +11,10 @@ Este directorio contiene capturas de terminal redactadas y sanitizadas provenien
 | `evidence-vuln-8426.txt` | Evidencia de OOM/abortos en 8.4.26 (`EVIDENCE.md` sección 2) |
 | `evidence-fixed-8427.txt` | Control en 8.4.27, ausencia de abortos (`EVIDENCE.md` sección 2) |
 | `evidence-aslr-diff.txt` | Diferencial de fuga y pruebas con ASLR off/on (`EVIDENCE.md` sección 2) |
-| `rce-on-aslr-on-8426.txt` | Validación final, RCE en 8.4.26, `display_errors=On`, ASLR on: 3/3 `uid=33` |
+| `rce-on-aslr-on-8426.txt` | Validación final, RCE en 8.4.26, `display_errors=On`, ASLR on: 3/3 `uid=33`, la etapa 2 resuelve `libphp` |
+| `9bie-aslr-on-8run.txt` | Cadena 9bie, 8 corridas reiniciando el contenedor antes de cada una: 8/8 `uid=33`, 8 bases de chunk y de `libphp` distintas |
+| `9bie-aslr-off-5run.txt` | Cadena 9bie, 5 corridas con ASLR desactivado (`setarch x86_64 -R`): 5/5 `uid=33`, 1 sola base de chunk y de `libphp` en todas las corridas |
+| `9bie-display-off-3run.txt` | Cadena 9bie con `display_errors=Off` y ASLR On: 0/3, todas las corridas se detienen en la etapa 1 (`HEAP_LEAK_FAILED`) |
 | `ctl-8427.txt` | Validación final, control en 8.4.27, 5 corridas: `HEAP_LEAK_FAILED`, 0 abortos |
 | `ace-8427.txt` | Validación final, cadenas A/C/E en 8.4.27-fpm: RCE `uid=33` |
 | `ace-8512.txt` | Validación final, cadenas A/C/E en 8.5.12-fpm: RCE `uid=33` |

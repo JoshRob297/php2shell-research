@@ -70,8 +70,12 @@ GDB probes require `CAP_SYS_PTRACE` and `--security-opt seccomp=unconfined`; see
 
 - The measurements hold for the exact image digests listed in `EVIDENCE.md`. A different build,
   allocator or kernel changes the geometry.
-- Under ASLR, the in-band cookie channel bounds `libphp` to a ~1.88 MB window but does not pin
-  it; the FPM path exposes no in-band leak at all. Those are measured limits, not tuning gaps.
+- Under ASLR, the in-band cookie channel at a 4000-byte read bounds `libphp` to a ~1.88 MB
+  window; a forged `zend_string` of `len=0xC8000` widens the same read to ~800 KB and pins it
+  (the 9bie chain, replicated 8/8 ASLR-on with `display_errors=On`; `../raw/9bie-aslr-on-8run.txt`; in the
+  same lab profile with `display_errors=Off` the chain stops at stage 1,
+  `../raw/9bie-display-off-3run.txt`). The FPM path exposes no in-band leak at all. Those
+  are measured limits, not tuning gaps.
 - The FPM E-OOM watchpoint is included because it is the evidence for the DoS/P3 verdict. The
   payload builder and the automated run loop are not, deliberately.
 

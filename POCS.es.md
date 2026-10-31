@@ -16,7 +16,7 @@ El código de PoC del laboratorio reside en un repositorio privado e invite-only
 
 | Repositorio | Qué es | Resultado Independiente |
 |---|---|---|
-| `9bie/php2shell-bypass-aslr-exp` | Exploit Python con bypass de ASLR, solo librería estándar | Funcional en laboratorio: 8/8 con ASLR On, 5/5 con ASLR Off; dependiente de la memoria del host |
+| `9bie/php2shell-bypass-aslr-exp` | Exploit Python con bypass de ASLR, solo librería estándar | Funcional en laboratorio: 8/8 con ASLR On, 5/5 con ASLR Off, `display_errors=On`; 0/3 con `display_errors=Off` y ASLR On (el autor reporta 10/10 con el perfil stock 128M/150 workers); dependiente de la memoria del host |
 | `ikow/php2shell-poc` | Cinco cadenas; A/B/C públicas, D/E con scripts de verificación y exploits completos de pago | A/B/C analizables y evaluables; verificación de D/E pública; D/E completos privados |
 | `GoldraK/php2shell-poc` | Fork del autor anterior; escáner A/C/E, laboratorio y reglas | Escáner reporta 24/24 vulnerable; mide A/C/E, no la cadena OOM |
 | `dinosn/php-cve-2026-10961x-lab-poc` | Laboratorio con asignador instrumentado | Asistido en lab; emplea `USE_ZEND_ALLOC=0`; no es una PoC remota universal |
@@ -42,7 +42,8 @@ El código de PoC del laboratorio reside en un repositorio privado e invite-only
 
 ### 9bie: Exploit con Bypass de ASLR
 - El exploit apunta a la cadena OOM/corrupción de estado e incluye bypass de ASLR para Apache `mod_php`.
-- En nuestro laboratorio produjo ejecución exitosa como `uid=33(www-data)` en 8/8 corridas con ASLR activo y 5/5 con ASLR desactivado.
+- En nuestro laboratorio produjo ejecución exitosa como `uid=33(www-data)` en 8/8 corridas con ASLR activo y 5/5 con ASLR desactivado (crudo: `raw/9bie-aslr-on-8run.txt`, con 8 bases de chunk y de `libphp` distintas en las 8 corridas; `raw/9bie-aslr-off-5run.txt`, una sola base en las 5 corridas). En el mismo perfil de laboratorio, con `display_errors=Off` y ASLR On se detiene en la etapa 1 en 0/3 corridas (`raw/9bie-display-off-3run.txt`); el perfil Off del autor (128M/150 workers) no se reprodujo aquí.
+- La corrida publicada por el autor usa el perfil oficial (`php.ini-production`, `display_errors=Off`, `memory_limit=128M`, `MaxRequestWorkers=150`) y reporta 10/10 en x86_64 y aarch64. Nuestras corridas 8/8 y 5/5 usaron el perfil de laboratorio (worker único, `memory_limit=8M`, `display_errors=On`); el perfil stock de 150 workers no se re-ejecutó aquí.
 - Advertencia: la técnica depende de la disposición del asignador y del kernel del host; no es universal sin calibración previa de offsets.
 
 ### ikow: Repositorio de Cinco Cadenas
