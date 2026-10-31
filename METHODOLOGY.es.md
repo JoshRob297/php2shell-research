@@ -10,6 +10,8 @@ Todos los experimentos fueron ejecutados en interfaces loopback sobre contenedor
 
 El estado de ASLR fue controlado mediante `setarch x86_64 -R` únicamente en ejecuciones con ASLR desactivado por proceso. Se utilizó una compilación de depuración con idénticos flags de configuración para introspección de símbolos; las imágenes oficiales no exponen símbolos internos para calibración estática.
 
+El arnés de medición está publicado en [`lab/`](lab/README.es.md) para que los números puedan re-derivarse sin redistribuir un kit de explotación. `lab/` incluye configs, scripts de sonda, módulos de medición y suite unitaria; los módulos operativos (C2, exfiltración, evasión de WAF, forjadores de payload, anti-forense, escáner multiobjetivo, orquestador unificado) se retienen por diseño. Los módulos de cadena de referencia degradan a no-op cuando falta el paquete `forge`.
+
 ## Despliegue Aplicativo
 
 Se empleó una **instancia de prueba de Nextcloud 33.0.x** corriendo **PHP 8.4.21 bajo Apache `mod_php` prefork** para validar la exposición de configuración y el nivel de parche. La prueba de RCE se obtuvo sobre la imagen oficial `php:8.4.26-apache`, no ejecutando el exploit contra el entorno de Nextcloud. Esta distinción es fundamental: el fallo ocurre en el inicio de la petición de PHP (`request startup`), antes del código de la aplicación. Por tanto, el nombre de la aplicación no es la primitiva; la arquitectura SAPI, el modelo de workers, los límites de cuerpo, las directivas de sesión y el camino de red definen la verdadera alcanzabilidad.

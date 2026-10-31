@@ -19,6 +19,9 @@ addresses and private paths are omitted; the commands are reproducible with offi
 - ASLR controlled with `setarch -R` only in the ASLR-off runs.
 - A debug build with the same configure flags was used for symbol introspection; the official
   image does not expose the internal symbols needed for offset calibration.
+- The harness that produced these numbers is published in [`lab/`](lab/README.md): configs,
+  probe scripts, measurement modules and the unit suite (`147 passed, 4 skipped`). The
+  operational modules are not distributed.
 
 Image digests as pulled for the lab:
 

@@ -59,6 +59,8 @@ another. A/C/E additionally need LFI, a per-directory handler mismatch, or a loc
 2. Run the 8.4.27 control described in `EVIDENCE.md`.
 3. Apply the configuration in `REMEDIATION.md`.
 4. Check the detection signals (OOM/abort logs, anomalous `PHPSESSID`).
+5. Re-derive the measurements with the published harness in [`lab/`](lab/README.md)
+   (`147 passed, 4 skipped`); it ships without the operational modules.
 
 ## Who wrote this?
 

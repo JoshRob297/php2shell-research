@@ -16,6 +16,7 @@ Mediciones sanitizadas obtenidas en contenedores de laboratorio desechables sobr
 - **Apache `mpm_prefork`**: Pool acotado de workers; worker único en pruebas que requerían determinismo estricto.
 - **Parámetros**: `display_errors=On`, `memory_limit=8M`, `post_max_size=64M`, `session.upload_progress.enabled=On`.
 - **ASLR**: Controlado mediante `setarch -R` exclusivamente en corridas con ASLR desactivado por proceso.
+- **Arnés**: El código que produjo estas mediciones está publicado en [`lab/`](lab/README.es.md): configs, scripts de sonda, módulos de medición y la suite unitaria (`147 passed, 4 skipped`). Los módulos operativos no se distribuyen.
 
 ---
 

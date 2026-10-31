@@ -38,6 +38,8 @@ La explotabilidad real depende estrictamente de la arquitectura del SAPI (`mod_p
 2. Ejecuta el control de verificación 8.4.27 documentado en `EVIDENCE.md`.
 3. Aplica las directivas de hardening indicadas en `REMEDIATION.md`.
 4. Monitoriza señales de detección (registros de OOM/abortos en error_log, valores anómalos de `PHPSESSID`).
+5. Re-deriva las mediciones con el arnés publicado en [`lab/`](lab/README.es.md)
+   (`147 passed, 4 skipped`); se distribuye sin los módulos operativos.
 
 ## ¿Quién realizó esta investigación?
 

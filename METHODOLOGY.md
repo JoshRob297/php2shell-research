@@ -15,6 +15,12 @@ ASLR was controlled with `setarch -R` only in the ASLR-off runs. A debug build w
 configure flags was used for symbol introspection; the official image does not expose the
 internal symbols needed for offset calibration.
 
+The measurement harness is published in [`lab/`](lab/README.md) so the numbers can be
+re-derived without redistributing an exploit kit. `lab/` ships the configs, probe scripts,
+measurement modules and unit suite; the operational modules (C2, exfiltration, WAF evasion,
+payload forgers, anti-forensics, multi-target scanner, unified orchestrator) are withheld by
+design. Reference chain modules degrade to no-ops when the forge package is absent.
+
 ## Application deployment
 
 A **Nextcloud 33.0.x test deployment** running **PHP 8.4.21 under Apache `mod_php` prefork** was
