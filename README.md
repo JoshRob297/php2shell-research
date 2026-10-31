@@ -147,6 +147,13 @@ Reproduces the memory allocator geometry and `PS(id)` forward-window sweep under
 - `tooling/oom_reach.py`: Evaluates whether a given `(memory_limit, post_max_size)` pair can theoretically trigger an OOM bailout under standard RFC 1867 multipart parsing.
 - `tooling/forged_cookie_check.py`: Inspects HTTP response headers for non-standard base64/hex bytes indicating Zend MM bin-64 free-list disclosure.
 
+### 5. Reproducible Measurement Harness (`lab/`)
+The code that produced the numbers in `EVIDENCE.md` and the matrices in `validation/`: allocator oracles, ASLR sweeps, cookie leak parsers, lab configs and the unit suite that pins the arithmetic. It ships without the operational modules (C2, exfiltration, WAF evasion, payload forgers, anti-forensics, multi-target scanner, unified orchestrator); the reference chain modules degrade to no-ops when the forge package is absent, so no end-to-end remote chain can be executed from it as published. See [Lab Documentation](lab/README.md).
+
+```bash
+cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
+```
+
 ---
 
 ## Repository contents
@@ -158,6 +165,7 @@ Reproduces the memory allocator geometry and `PS(id)` forward-window sweep under
 | [`EVIDENCE.md`](EVIDENCE.md) | Sanitized lab evidence, matrices and raw output excerpts (sections 1–13) |
 | [`tooling/checker/`](tooling/checker/) | Safe, non-destructive diagnostic CLI with prompt-injection defense |
 | [`tooling/`](tooling/) | `oom_reach.py`, `forged_cookie_check.py`, and instrumented labkit replica |
+| [`lab/`](lab/) | Measurement harness: allocator oracles, ASLR sweeps, cookie leak parsers, lab configs and unit suite (147 passed, 4 skipped). Operational modules are not distributed |
 | [`validation/`](validation/) | Sanitized `PS(id)` vs HashTable matrix, allocator geometry and interpretation |
 | [`detection/`](detection/) | Additive Suricata 8 and Sigma rules (forged cookie, groom signatures, abort bursts) |
 | [`raw/`](raw/) | Redacted raw lab captures backing the OOM/ASLR rows |

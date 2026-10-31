@@ -148,6 +148,13 @@ Reproduce la geometría del asignador de memoria y el barrido de la ventana haci
 - `tooling/oom_reach.py`: Evalúa si un par `(memory_limit, post_max_size)` puede teóricamente disparar un OOM bajo el parser multipart RFC 1867 estándar.
 - `tooling/forged_cookie_check.py`: Inspecciona cabeceras HTTP en busca de bytes no estándar indicativos de divulgación de free-lists bin-64 de Zend MM.
 
+### 5. Arnés de Medición Reproducible (`lab/`)
+El código que produjo los números de `EVIDENCE.es.md` y las matrices de `validation/`: oráculos del asignador, barridos de ASLR, parsers de fuga por cookie, configs de laboratorio y la suite unitaria que fija la aritmética. Se publica sin los módulos operativos (C2, exfiltración, evasión de WAF, forjadores de payload, anti-forense, escáner multiobjetivo, orquestador unificado); los módulos de cadena de referencia degradan a no-op cuando falta el paquete `forge`, por lo que no se puede ejecutar una cadena remota de extremo a extremo tal como se publica. Ver [Documentación del Laboratorio](lab/README.es.md).
+
+```bash
+cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
+```
+
 ---
 
 ## Contenido del Repositorio
@@ -161,6 +168,7 @@ Reproduce la geometría del asignador de memoria y el barrido de la ventana haci
 | [`REMEDIATION.md`](REMEDIATION.md) / [`REMEDIATION.es.md`](REMEDIATION.es.md) | Guía detallada de remediación, reglas WAF y hardening de php.ini |
 | [`tooling/checker/`](tooling/checker/) | CLI de diagnóstico seguro con defensas contra prompt-injection |
 | [`tooling/`](tooling/) | Herramientas `oom_reach.py`, `forged_cookie_check.py` y replica labkit |
+| [`lab/`](lab/) | Arnés de medición: oráculos del asignador, barridos de ASLR, parsers de fuga por cookie, configs de laboratorio y suite unitaria (147 passed, 4 skipped). Los módulos operativos no se distribuyen |
 | [`validation/`](validation/) | Matriz sanitizada `PS(id)` vs HashTable y geometría de memoria |
 | [`detection/`](detection/) | Reglas Suricata 8 y Sigma para detección de anomalías y firmas |
 | [`raw/`](raw/) | Salidas crudas redactadas que respaldan las pruebas de laboratorio |
