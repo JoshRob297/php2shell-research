@@ -3,7 +3,7 @@
 # php2shell — Verificación Independiente y Auditoría de Límites de Explotación
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.9.0_(2026--10--31)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.9.0)
+[![Release](https://img.shields.io/badge/Release-v1.9.1_(2026--10--31)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.9.1)
 [![Target](https://img.shields.io/badge/Objetivos_PHP-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRÍTICO-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Ventana_Cookie_1.88_MB-d97706?style=flat-square)](#)
@@ -17,7 +17,7 @@
 ---
 </div>
 
-- **Estado**: Publicación v1.9.0, 2026-10-31 (calibración en imágenes oficiales de distribución, pruebas de aislamiento de stdout en FastCGI, desambiguación de arquitecturas SAPI y falsificación de límites de ASLR a nivel de proceso).
+- **Estado**: Publicación v1.9.1, 2026-10-31 (calibración en imágenes oficiales de distribución, pruebas de aislamiento de stdout en FastCGI, desambiguación de arquitecturas SAPI, alcance de ASLR medido por tamaño de lectura, transcripciones por corrida de la cadena 9bie y arnés de medición publicado).
 - **Alcance**: Ramas de PHP 8.4.x y adyacentes (8.2, 8.3, 8.5), imágenes oficiales en contenedores, código público de prueba de concepto (PoC) y reproducción independiente en laboratorio.
 - **Alcance aplicativo**: Se utilizó un entorno de prueba de Nextcloud 33.0.x (PHP 8.4.21, Apache `mod_php` prefork) para validar la exposición de configuración y nivel de parche. La prueba de RCE se obtuvo sobre la imagen oficial `php:8.4.26-apache`. El fallo reside en el inicio de la petición de PHP, no en el código de Nextcloud.
 - **Artefactos**: Versiones formales en PDF (`REPORT.pdf` y `RESUMEN.pdf`), instrumentación de laboratorio reproducible (`tooling/labkit/` y `tooling/docker-compose.yml`), herramienta de diagnóstico no destructiva (`tooling/checker/`), calculadoras offline de alcanzabilidad y reglas de detección.
