@@ -6,7 +6,9 @@
 
 **CVE-2026-109618 / CVE-2026-109619 / CVE-2026-115560**
 
-Versión 1.7.0, 2026-10-27. Elaborado por **JoshRob**. Investigación de seguridad independiente. Sin nombres de host, direcciones IP privadas, credenciales ni datos de clientes.
+Versión 1.8, 2026-11-02. Elaborado por **JoshRob**. Investigación de seguridad independiente. Sin nombres de host, direcciones IP privadas, credenciales ni datos de clientes.
+
+Esta revisión corrige el alcance de ASLR: con lectura de 4000 B la cookie acota `libphp` a ~481 páginas sin fijarlo, mientras que un `zend_string` forjado de `len=0xC8000` devuelve ~800 KB y resuelve la base. Añade las transcripciones por corrida de la cadena 9bie (8/8 con ASLR activo, 5/5 desactivado) y corrige el estado de parches de PHP 7.4-8.1, que tienen backports oficiales mínimos en las ramas de `php-src` `PHP-7.4/8.0/8.1-CVE-2026-109618-109619`. Reconcilia además las dos cifras anteriores de `libphp`: 1.51 MB / 387 páginas medidas a la base y 1.88 MB / 481 páginas medidas al breakpoint `php_session_reset_id`.
 
 ---
 

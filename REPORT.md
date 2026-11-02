@@ -6,7 +6,7 @@
 
 **CVE-2026-109618 / CVE-2026-109619 / CVE-2026-115560**
 
-Version 1.7, 2026-10-26. Prepared by **JoshRob**. Independent security research. No hostnames,
+Version 1.8, 2026-11-02. Prepared by **JoshRob**. Independent security research. No hostnames,
 addresses, credentials or customer data.
 
 Changelog: v1.1 documented the FPM stale-BG chain reproduction. v1.2 records the definitive crash
@@ -24,6 +24,13 @@ and lab reproduction of the StealMyBitcoin challenge, documenting the SAPI archi
 (forged `HashTable` -> `zif_system`). v1.7.0 consolidates full empirical calibration across official stock
 distribution images (`php:8.4.26-fpm` Debian 13), measuring exact symbol offsets in uninstrumented builds,
 FastCGI stdout stream isolation falsification, and the process-level `setarch x86_64 -R` operational boundary.
+v1.8 (2026-11-02) corrects the ASLR scope: the 4000-byte cookie over-read bounds `libphp` to ~481 pages
+without pinning it, while a forged `zend_string` of `len=0xC8000` returns ~800 KB and resolves the base.
+It adds the per-run transcripts for the 9bie chain (8/8 with ASLR on, 5/5 off) and corrects the patch
+state for PHP 7.4-8.1, which have minimal official backports in the `php-src` branches
+`PHP-7.4/8.0/8.1-CVE-2026-109618-109619`. It also reconciles the two earlier `libphp` figures:
+1.51 MB / 387 pages measured to the base, 1.88 MB / 481 pages measured to the
+`php_session_reset_id` breakpoint.
 
 ## 1. Executive summary
 

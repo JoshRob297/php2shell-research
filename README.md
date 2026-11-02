@@ -7,7 +7,7 @@
 [![Target](https://img.shields.io/badge/PHP_Targets-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRITICAL-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Cookie_Window_1.88_MB-d97706?style=flat-square)](#)
-[![PDF](https://img.shields.io/badge/Download-Technical_Report_(PDF)-059669?style=flat-square&logo=adobeacrobatreader)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0)
+[![PDF](https://img.shields.io/badge/Download-Technical_Report_(PDF)-059669?style=flat-square&logo=adobeacrobatreader)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.9.1)
 
 **An exhaustive memory-allocator & microarchitecture study by JoshRob**  
 *Independent verification of public ASLR bypass claims, chunked POST boundaries, and Zend MM free-list heap disclosure.*
@@ -22,7 +22,7 @@ Contact: Telegram [@JocesLab](https://t.me/JocesLab) · email [joshrob.sec@proto
 - **Status**: public release v1.9.1, 2026-10-31 (official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, measured ASLR scope per read size, per-run 9bie transcripts, and the published measurement harness).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
-- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `README.es.md`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
+- **Artifacts**: formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
 - **AI-assisted**: multiple AI models and specialized subagents were used under human direction for review, lab orchestration and documentation checks; every finding was validated against commands, outputs or public sources. See `METHODOLOGY.md`.
 
 ## Executive summary
@@ -182,7 +182,7 @@ cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
 | [`LICENSE`](LICENSE) | CC BY 4.0 license notice |
 
 > [!TIP]
-> **Official Formatted PDF Release**: Formatted typography versions of `REPORT.md` (13 pages, A4) and `README.es.md` (4 pages, A4) with verified checksums are available on the [v1.0.0 Release Page](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.0.0).
+> **Official Formatted PDF Release**: Formatted typography versions of `REPORT.md` (13 pages, A4) and `REPORT.es.md` (3 pages, A4), with verified checksums in `SHA256SUMS`, are available on the [v1.9.1 Release Page](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.9.1).
 
 ---
 
