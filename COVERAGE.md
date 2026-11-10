@@ -107,6 +107,8 @@ leak). Raw: `raw/fixed-branches-verify.txt`.
   per OOM and `mod_php`-only, and on `mod_php` the leak and the stale-`BG(unserialize)`
   primitive are mutually exclusive.
 - Kernel/allocator portability is not solved; public PoC results vary by host.
+  `PORTABILITY.md` records the measured matrix behind that sentence: `KeepAlive On`,
+  proxy buffering and an unsaturated worker pool each break the chain on their own.
 - A/C/E prerequisites are application-specific; the matrix records the lab conditions, not a
   universal exploitability claim.
 - The Nextcloud 33.0.x test deployment was used for configuration validation, not as the RCE
