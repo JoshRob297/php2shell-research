@@ -1,0 +1,127 @@
+chain-e / aslr_sweep — medición del 2026-11-09
+==============================================
+
+Pregunta: ¿el módulo `aslr_sweep` derrota ASLR lo suficiente como para que la cadena E deje de
+ser LAB ONLY?
+
+Respuesta: no. No construye payload, y su criterio de éxito da falso positivo con "OK".
+
+Target
+------
+Host cachy, kernel con randomize_va_space = 2 (ASLR encendido)
+fpmdbg   phpdebug:8.4.26-fpm   pm = static, pm.max_children = 1, listen 9000
+ngdbg    nginx:alpine          127.0.0.1:18088 -> fpmdbg:9000
+webroot  index.php:
+           <?php
+           session_start();
+           echo "PHP " . PHP_VERSION . "\n";
+           echo "SAPI " . php_sapi_name() . "\n";
+           echo "upload_progress " . ini_get('session.upload_progress.enabled') . "\n";
+           echo "OK\n";
+
+php.ini  memory_limit = 32M
+         post_max_size = 128M
+         display_errors = On
+         session.save_path = /tmp/sessions
+         session.use_strict_mode = 0
+         session.upload_progress.enabled = On
+
+Respuesta normal del target
+---------------------------
+$ curl -s http://127.0.0.1:18088/
+PHP 8.4.26
+SAPI fpm-fcgi
+upload_progress 1
+OK
+
+Por qué el barrido no puede funcionar
+-------------------------------------
+_send() en el módulo, sin recortes:
+
+    data_candidates = [
+        {"page": page_val, "p": page_val},
+        f"page={page_val}",
+    ]
+    ...
+    return session.post(target_url, data=dc, params={"page": page_val}, timeout=10)
+
+Envía el número de página como dato de formulario. No hay cuerpo multipart, ni struct forjado,
+ni aritmética de direcciones: nunca intenta un aterrizaje.
+
+_is_success(), sin recortes:
+
+    if marker is not None:
+        if str(m) in text:
+            return True
+    if isinstance(cmd, str) and cmd and cmd in text:
+        return True
+    low = text.lower()
+    for m in SUCCESS_MARKERS:
+        if m.lower() in low:
+            return True
+
+SUCCESS_MARKERS = ("uid=", "gid=", "root", "PWNED", "pwned", "success", "OK", "ok", "done")
+
+La comprobación de los markers por defecto se ejecuta siempre, incluso cuando se pasa `marker=`.
+Cualquier página que imprima "OK" produce éxito.
+
+Medición A — criterio tal como está en el código
+------------------------------------------------
+sweep_aslr("http://127.0.0.1:18088/", Session(), "id", pages=20, rate=20)
+
+{
+  "success": true,
+  "page": 0,
+  "elapsed": 0.01,
+  "requests": 1
+}
+
+Falso positivo: la página imprime "OK", no se ejecutó nada.
+
+Medición B — se pasa marker="uid=" y el módulo lo ignora
+--------------------------------------------------------
+sweep_aslr(URL, Session(), "id", pages=387, rate=50, marker="uid=")
+
+{
+  "success": true,
+  "page": 0,
+  "elapsed": 0.0
+}
+
+El marker explícito no desactiva SUCCESS_MARKERS. Mismo falso positivo.
+
+Medición C — criterio corregido, exigir salida real de comando
+--------------------------------------------------------------
+Criterio: status < 400 y ("uid=" en el cuerpo y "gid=" en el cuerpo).
+387 iteraciones, POST {"page": N} con params={"page": N}.
+
+{
+  "pages": 387,
+  "hits": [],
+  "first_hit_page": null,
+  "status_codes": {"200": 387},
+  "elapsed_s": 0.34,
+  "payload_built": false,
+  "page_alive_after": true,
+  "page_body_tail": "OK"
+}
+
+Salud del worker después del barrido
+------------------------------------
+docker logs --since 5m fpmdbg | grep -cE 'SIGSEGV|segmentation|exited with code'
+0
+
+Conclusión
+----------
+El barrido es un andamiaje, no un mecanismo. No derrota ASLR porque no lo intenta, y su
+criterio de éxito está roto. El veredicto de la cadena E no cambia:
+
+  LAB ONLY — bajo ASLR encendido, sin infoleak secundario ni LFI local, es un DoS determinista
+  por caída del worker (P3).
+
+Acciones tomadas en el material privado:
+  - `aslr_sweep` marcado como andamiaje en el docstring y bloqueado salvo allow_scaffold=True
+  - quinta vía descartada añadida al informe de la cadena E
+  - esta transcripción archivada en el repo de auditoría
+
+Este archivo no contiene cuerpos operativos ni datos del entorno del usuario.
