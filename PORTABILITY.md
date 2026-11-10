@@ -26,6 +26,11 @@ and which ones only look like gates.
 | `Off`, `8M`, 1 worker, official image, ASLR **on** | **0/3** — blocked by the `libphp` leak | n/a |
 | `On`, `8M`, 1 worker, kernel pve 7.0, ASLR on | 0/3 | n/a |
 
+> The `Off` + ASLR-on row above is the **8M lab profile**. The stock geometry is a different
+> cell: with `php.ini-production` (128M) and the upstream `pure/` chain, `display_errors=Off`
+> with ASLR on gives 10/10 — see `COVERAGE.md` §1 and
+> `raw/9bie-pure-off-aslr-on-10run.txt`.
+
 ## What the matrix says
 
 1. **`memory_limit` is not the gate; `post_max_size` is.** At 512M/480 MB the chain runs the

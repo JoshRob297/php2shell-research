@@ -26,6 +26,10 @@ cadena y cuáles solo lo parecen.
 | `Off`, `8M`, 1 worker, imagen oficial, ASLR **encendido** | **0/3** — bloqueado por el leak de `libphp` | n/d |
 | `On`, `8M`, 1 worker, kernel pve 7.0, ASLR encendido | 0/3 | n/d |
 
+> La fila `Off` + ASLR On de arriba es el **perfil de laboratorio de 8M**. La geometría stock es
+> otra celda: con `php.ini-production` (128M) y la cadena `pure/` del upstream, `display_errors=Off`
+> con ASLR On da 10/10 — ver `COVERAGE.es.md` §1 y `raw/9bie-pure-off-aslr-on-10run.txt`.
+
 ## Lo que dice la matriz
 
 1. **`memory_limit` no es el candado: lo es `post_max_size`.** Con 512M/480 MB la cadena corre

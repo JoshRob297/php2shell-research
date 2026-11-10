@@ -3,7 +3,7 @@
 # php2shell — Verificación Independiente y Auditoría de Límites de Explotación
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.10.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.10.0)
+[![Release](https://img.shields.io/badge/Release-v1.11.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.11.0)
 [![Target](https://img.shields.io/badge/Objetivos_PHP-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRÍTICO-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Ventana_Cookie_1.88_MB-d97706?style=flat-square)](#)
@@ -103,7 +103,7 @@ La evaluación empírica de la primitiva E-OOM en PHP-FPM 8.4.26 (`fpmdbg` detr�
 |---|---|---|:---:|---|
 | mod_php 8.4.26 | `display_errors=On` · ASLR On | RCE alcanzado (3/3 ejecuciones exitosas, `uid=33`) | `CONFIRMADO` | Sección 1 |
 | mod_php 8.4.26 | `display_errors=Off` · ASLR Off | RCE alcanzado (3/3 ejecuciones exitosas, `uid=33`) | `CONFIRMADO` | Sección 1 |
-| mod_php 8.4.26 | `display_errors=Off` · ASLR On | Cadena de cookie: solo divulgación de heap con 4000 B (ventana de 1.88 MB), 0/3 RCE. Cadena 9bie: 0/3 en el perfil de laboratorio, se detiene en la etapa 1 (`raw/9bie-display-off-3run.txt`) | `NO ALCANZADO` | Sección 11 |
+| mod_php 8.4.26 | `display_errors=Off` · ASLR On | Cadena de cookie: solo divulgación de heap con 4000 B (ventana de 1.88 MB), 0/3 RCE. Cadena 9bie anterior: 0/3 en el perfil de laboratorio, se detiene en la etapa 1 (`raw/9bie-display-off-3run.txt`); cadena `pure/` del upstream: **10/10** en stock 128M/150 workers con `display_errors=Off` y ASLR On (`raw/9bie-pure-off-aslr-on-10run.txt`), 0/5 en 8.4.27 | `NO ALCANZADO` | Sección 11 |
 | FPM 8.4.26 (Leak) | FastCGI Stream · ASLR On | Worker muere en OOM (`exit 70`, 502); worker nuevo con heap limpio | `SIN CANAL` | Sección 10 |
 | CVE-2026-115560 | `php_binary` + runtime `ini_set()` | Fallo de decode observado; sin impacto en seguridad de memoria | `NO CONCLUYENTE` | Sección 12 |
 | Chunked `post_max_size` | Sin parche (8.2.34 / 8.3.35 / 8.4.26) | 30M parsea completo, 70M causa OOM en límite de 128M | `BYPASS CONFIRMADO` | Sección 12 |

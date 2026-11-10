@@ -32,7 +32,7 @@ Definiciones de estado:
 | Aborto OOM / Corrupción de heap | Afectado por versión; no explotado | fail | pass | pass (0/3) | Control 8.4.27: 0/5 sin abortos; ramas corregidas bloqueadas en etapa 1 |
 | RCE, `display_errors=On`, ASLR On | No probado | fail (3/3) | pass (0/5) | pass (0/3) | mod_php prefork; re-ejecución de control 3/3 en el mismo arnés |
 | RCE, `display_errors=Off`, ASLR Off | No probado | fail (3/3) | pass | No probado aquí | Build con offsets calibrados; ramas fijas no probadas en este perfil |
-| RCE, `display_errors=Off`, ASLR On | No probado | No alcanzado: cadena de cookie 0/3 controlado; cadena 9bie también 0/3, se detiene en la etapa 1 (su 8/8 requiere `display_errors=On`) | pass | No probado | Reclamación 12/12 retractada; la cookie de 4000 B depende del estado y la lectura de 0xC8000 necesita salida de errores para la etapa 1 |
+| RCE, `display_errors=Off`, ASLR On | No probado | **alcanzado 10/10** con la cadena `pure/` del upstream en stock 128M/150 workers (10 bases `libphp` distintas, ejecución real de comando), 0/5 en 8.4.27; nuestra cadena de cookie 0/3 y la cadena 9bie anterior 0/3 | pass | No probado | Reclamación 12/12 retractada; la cookie de 4000 B depende del estado y la lectura de 0xC8000 necesita salida de errores para la etapa 1 |
 | FPM decode OOM / `BG(unserialize)` colgante | No probado | Crash UAF determinista (502) comprobado en watchpoint; con struct reclamado por multipart, escritura controlada de 16 B en `sapi_module.ub_write = &system` -> RCE en lab | No probado | No probado | CVE-2026-109619; mecanismo por defecto = enlace de free-list sobre `used_slots`; variante controlada = fake `var_dtor_entries` (ASLR off, sesión de 24 B); 8.4.27 estable |
 | Divulgación de memoria vía cookie | No probado | Parcial (cookie de 4000 B revela punteros de heap; HashTable inalcanzable; libphp acotado a ~1.88 MB con esa lectura, fijado con `zend_string` de 0xC8000 -- cadena 9bie, 8/8 con ASLR On) | pass | pass (0/3) | Dependiente de geometría; ramas fijadas: fuga no reproducible |
 | CVE-2026-115560 (Informativo, 2026-10-23) | No probado | No probado | No corregido | No probado | Condición estrecha (config `php_binary` + `ini_set()` a `php` en runtime); mitigación `session.upload_progress.enabled=0` |
@@ -71,7 +71,7 @@ Ramas fijadas 8.3.36 y 8.2.35 (mismo arnés, 3 corridas c/u): 0/3, bloqueadas en
 
 | PoC / Herramienta | Reclamación | Estado Independiente |
 |---|---|---|
-| 9bie | Bypass de ASLR / RCE | pass en laboratorio con `display_errors=On` (8/8 ASLR On, 8 bases distintas; 5/5 Off, 1 base); 0/3 con `display_errors=Off` + ASLR On en el mismo perfil de laboratorio; `raw/9bie-aslr-on-8run.txt`, `raw/9bie-aslr-off-5run.txt`, `raw/9bie-display-off-3run.txt`; el autor reporta 10/10 con el perfil stock de 150 workers; dependiente de la memoria del host |
+| 9bie | Bypass de ASLR / RCE | pass en laboratorio con `display_errors=On` (8/8 ASLR On, 8 bases distintas; 5/5 Off, 1 base); la cadena anterior 0/3 con `display_errors=Off` + ASLR On; la cadena `pure/` del upstream **10/10** con `Off` + ASLR On en el perfil stock 128M/150 workers (`raw/9bie-pure-off-aslr-on-10run.txt`); `raw/9bie-aslr-on-8run.txt`, `raw/9bie-aslr-off-5run.txt`, `raw/9bie-display-off-3run.txt`; el autor reporta 10/10 con el perfil stock de 150 workers; dependiente de la memoria del host |
 | ikow A/B/C | Cadenas | Código analizable; A/C requieren prerrequisitos; B es local |
 | ikow D/E | Scripts de verificación | Públicos; exploits completos cerrados/de pago |
 | GoldraK scanner A/C/E | 24/24 vulnerable | pass para A/C/E; no mide OOM; 8.4.27 omitido de la tabla |
@@ -83,7 +83,7 @@ Ramas fijadas 8.3.36 y 8.2.35 (mismo arnés, 3 corridas c/u): 0/3, bloqueadas en
 
 | Capa | Qué se probó | Generalización |
 |---|---|---|
-| Oficial `php:8.4.26-apache` | RCE 3/3 On/ASLR On; 3/3 Off/ASLR Off; cadena de cookie 0/3 Off/ASLR On, cadena 9bie 8/8 con ASLR On y 0/3 con ASLR On + `display_errors=Off` | Primitiva a nivel de motor PHP; dependiente del build/allocator |
+| Oficial `php:8.4.26-apache` | RCE 3/3 On/ASLR On; 3/3 Off/ASLR Off; cadena de cookie 0/3 Off/ASLR On, cadena `pure/` de 9bie 10/10 con `Off` + ASLR On en stock 128M (0/3 en 8M) | Primitiva a nivel de motor PHP; dependiente del build/allocator |
 | Oficial `php:8.4.27-apache` | 0/5 control | Parche oficial para la clase OOM |
 | Nextcloud 33.0.x test, PHP 8.4.21 `mod_php` | Versión/configuración validada; RCE no ejecutado | Primitiva independiente de la app; dependiente del despliegue |
 | FPM A/C/E | RCE con prerrequisitos de laboratorio | Dependiente de aplicación/configuración |
