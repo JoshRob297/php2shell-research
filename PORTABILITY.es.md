@@ -1,5 +1,7 @@
 # Portabilidad: por qué la misma PoC da números distintos
 
+[English](PORTABILITY.md) · [Español](PORTABILITY.es.md)
+
 Cada celda se midió en el mismo laboratorio — loopback, `php:8.4.26-apache`, tres intentos por
 celda salvo que se indique — y responde una pregunta: qué condiciones **sí** condicionan la
 cadena y cuáles solo lo parecen.

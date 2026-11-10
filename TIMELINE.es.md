@@ -1,5 +1,7 @@
 # Cronología de la divulgación (UTC)
 
+[English](TIMELINE.md) · [Español](TIMELINE.es.md)
+
 Compilada de fuentes públicas, con nuestros eventos de laboratorio marcados como tales. El
 objetivo es que el orden sea verificable: varias afirmaciones en circulación solo tienen sentido
 contra esta línea de tiempo.

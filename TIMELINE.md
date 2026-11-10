@@ -1,5 +1,7 @@
 # Disclosure timeline (UTC)
 
+[English](TIMELINE.md) · [Español](TIMELINE.es.md)
+
 Compiled from public sources, with our own lab events marked as such. The purpose is to make
 the order of events checkable: several claims in circulation only make sense against it.
 

@@ -1,5 +1,7 @@
 # Portability: why the same PoC gives different numbers
 
+[English](PORTABILITY.md) · [Español](PORTABILITY.es.md)
+
 Every cell below was measured in the same lab — loopback, `php:8.4.26-apache`, three attempts
 per cell unless stated — and answers one question: which conditions actually gate the chain,
 and which ones only look like gates.
