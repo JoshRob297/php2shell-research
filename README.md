@@ -3,7 +3,7 @@
 # php2shell — Independent Verification & Exploitation Boundary Audit
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.13.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.13.0)
+[![Release](https://img.shields.io/badge/Release-v1.14.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.14.0)
 [![Target](https://img.shields.io/badge/PHP_Targets-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRITICAL-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Cookie_Window_1.88_MB-d97706?style=flat-square)](#)
@@ -19,10 +19,10 @@ Contact: Telegram [@JocesLab](https://t.me/JocesLab) · email [joshrob.sec@proto
 ---
 </div>
 
-- **Status**: public release v1.13.0, 2026-11-09 (portability matrix and disclosure timeline published, patch-state check against php.net and php-src, plus the v1.0.0→latest pointer; official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, measured ASLR scope per read size, per-run 9bie transcripts, and the published measurement harness).
+- **Status**: public release v1.14.0, 2026-11-09 (portability matrix and disclosure timeline published, patch-state check against php.net and php-src, plus the v1.0.0→latest pointer; official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, measured ASLR scope per read size, per-run 9bie transcripts, and the published measurement harness).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
-- **Artifacts**: `PORTABILITY.md` (the measured matrix of what gates the chain), `TIMELINE.md` (disclosure timeline with sources), `CHAIN-E.md` (the FPM arm, measured: layout, preconditions and the paths that did not work), `RELIABILITY.md` (what decides whether it fires, and how often), formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
+- **Artifacts**: `PORTABILITY.md` (the measured matrix of what gates the chain), `TIMELINE.md` (disclosure timeline with sources), `CHAIN-E.md` (the FPM arm, measured: layout, preconditions and the paths that did not work), `RELIABILITY.md` (what decides whether it fires, and how often), `CHAIN-D.md` (the object store at shutdown, measured: a negative result with its scope), formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
 - **AI-assisted**: multiple AI models and specialized subagents were used under human direction for review, lab orchestration and documentation checks; every finding was validated against commands, outputs or public sources. See `METHODOLOGY.md`.
 
 ## Executive summary
@@ -107,7 +107,7 @@ Empirical evaluation of the E-OOM primitive on PHP-FPM 8.4.26 (`fpmdbg` behind N
 | CVE-2026-115560 | `php_binary` config + runtime `ini_set()` | Bounded attempt: decode failure observed, no memory safety impact | `INCONCLUSIVE` | Section 12 |
 | Chunked `post_max_size` | Unpatched (8.2.34 / 8.3.35 / 8.4.26) | 30M parses full, 70M OOMs on 128M limit (worker lives) | `BYPASS CONFIRMED` | Section 12 |
 | Chunked `post_max_size` | Patched (8.4.27 / 8.5.12) | Rejected: `Actual POST length does not match Content-Length` | `PATCHED` | Section 12 |
-| Chain D (`EG` at shutdown) | Unpatched `mod_php` | `EG(objects_store)` identical before/after OOM; no crash | `UNSUPPORTED` | Section 12 |
+| Chain D (`EG` at shutdown) | Unpatched `mod_php` | `EG(objects_store)` header identical before/after OOM, store empty at shutdown; no crash | `UNSUPPORTED as a stale-store claim` — the bucket-array variant is separate and open | Section 12, `CHAIN-D.md` |
 | `mod_php` 8.4.27 Control | Default Limits (128M / 8M) | Clean execution, no memory corruption | `PATCHED (0/5)` | Section 7 |
 | A/C/E Request-level chains | 8.4.26 / 8.4.27 / 8.5.12 | RCE conditional on application sinks (LFI / gadget / handler) | `APP DEPENDENT` | Section 3 |
 | Chain A with `strict=1` | All versions | File under attacker-chosen SID absent; injection blocked | `PREVENTED` | Section 3 |
