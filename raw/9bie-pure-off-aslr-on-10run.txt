@@ -64,7 +64,10 @@ run | libphp               | main                 | result
 
 === boundaries of this row ===
 - Requires the stock 128M geometry + the official php.ini-production. At memory_limit=8M the
-  chain is 0/3: A1 does not exhaust memory, so B1 never gets its stale id.
+  same chain is 0/3 with one worker, while 128M with one worker gives 3/3: the offsets and the
+  leak window are calibrated for the 128M geometry. A1 itself does trigger at 8M — our older
+  chain goes 8/8 there with display_errors=On (see PORTABILITY.md) — so what fails is the
+  calibration, not the trigger.
 - The repo's own tooling/docker-compose.yml does not reproduce it: vuln-8426 loads no php.ini
   (Loaded Configuration File => (none)) and reports display_errors => STDOUT. Adding only
   display_errors=Off on top of hardening-off.ini gives 0/3, because B1 finds no pointers: the
