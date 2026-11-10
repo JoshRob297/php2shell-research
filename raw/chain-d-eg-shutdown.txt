@@ -1,0 +1,54 @@
+chain D / EG(objects_store) at shutdown — measurement of 2026-10-24
+===================================================================
+
+Question: is the object store left stale or dangling when a request dies in the middle of
+its startup, so that the next request on the same worker can consume it?
+
+Target
+------
+php:8.4.26-apache (mod_php, prefork), memory_limit 128M, post_max_size 8M
+Worker pid 17, same worker for all three requests
+Breakpoint: php_request_shutdown, main/main.c:1891
+
+Sequence on that worker
+-----------------------
+1. warmup GET                 -> HTTP 200
+2. chunked 70M at startup     -> HTTP 500, "Allowed memory size of 134217728 bytes exhausted
+                                 (tried to allocate 102400 bytes) in Unknown on line 0"
+3. GET after the OOM          -> HTTP 200   (the worker survived)
+
+At the shutdown breakpoint, three observations, one per request:
+
+SHUTDOWN ob=0x7f1b30451000 top=1 size=1024 flh=-1 err=30719
+0x7f1b30451000: 0x0000000000000000  0x0000000000000000
+SHUTDOWN ob=0x7f1b30451000 top=1 size=1024 flh=-1 err=30719
+0x7f1b30451000: 0x0000000000000000  0x0000000000000000
+SHUTDOWN ob=0x7f1b30451000 top=1 size=1024 flh=-1 err=30719
+0x7f1b30451000: 0x0000000000000000  0x0000000000000000
+
+Second run, same shape, with the VM stack included:
+
+SHUTDOWN ob=0x7f0ed8651000 top=1 size=1024 flh=-1 err=30719 ced=(nil) vs=0x7f0ed8611000 vst=0x7f0ed8611020 vse=0x7f0ed8651000   (x3)
+
+Reading
+-------
+- The store pointer (`ob`), its next-free slot (`top=1`), its capacity (`size=1024`) and the
+  free-list head (`flh=-1`) are identical in all three shutdowns.
+- `top=1` with handle 0 reserved means the store holds no live objects at shutdown, and the
+  first two bucket entries read as zero. That is consistent across the healthy request, the
+  one that died at startup, and the one that followed.
+- `current_execute_data`, `vm_stack` top and end are also identical.
+- No crash, no dangling pointer, and the worker kept serving.
+
+What this measures, and what it does not
+----------------------------------------
+Measured: the state of the object store header at shutdown is the same whether or not the
+request died in the middle of startup. The "stale EG(objects_store)" framing, where the
+pointer or its bookkeeping is left behind for the next request, is not supported by this.
+
+Not measured: the contents of the entire 1024-entry bucket array, and the case where the
+request reaches shutdown with live objects. Other work covers that variant and reaches further
+than this measurement does; this file does not contradict it.
+
+Raw source: private audit repository, evidence/fase8-multisapi/evidence-chaind/
+(eg.log, eg_a.log, summary.txt, summary2.txt).
