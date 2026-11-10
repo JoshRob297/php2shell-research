@@ -33,6 +33,9 @@ contra esta línea de tiempo.
 | 2026-10-24 | **Lab:** el leak de cookie no existe en FPM (A mata al worker, exit 70); en `mod_php` el leak y la primitiva de `BG(unserialize)` colgante son mutuamente excluyentes — la ruta Off + ASLR on queda cerrada por ambas vías | este proyecto |
 | 2026-10-24 | **Lab:** bypass de `post_max_size` con chunked confirmado (claim de chain D de ikow): chunked 30 MB parsea completo, chunked 70 MB hace OOM en request startup con 128M/8M | este proyecto |
 | 2026-11-09 | La última estable sigue siendo 8.4.27 / 8.5.12; 8.4.28 y 8.5.13 son solo RC1; CVE-2026-115560 sigue sin fix estable | php.net, php-src |
+| 2026-10-26 | **CISA agrega ambas CVE a KEV**, fecha límite federal 29 oct | CISA |
+| 2026-10-27 | La prensa confirma explotación y el plazo de tres días para agencias | The Register |
+| 2026-10-28 | KEV agrega CVE-2026-46300 (kernel Linux), documentada como encadenable con este par para llegar a root | CISA |
 
 ## Notas
 

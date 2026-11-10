@@ -3,7 +3,7 @@
 # php2shell — Independent Verification & Exploitation Boundary Audit
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.11.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.11.0)
+[![Release](https://img.shields.io/badge/Release-v1.12.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.12.0)
 [![Target](https://img.shields.io/badge/PHP_Targets-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRITICAL-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Cookie_Window_1.88_MB-d97706?style=flat-square)](#)
@@ -19,7 +19,7 @@ Contact: Telegram [@JocesLab](https://t.me/JocesLab) · email [joshrob.sec@proto
 ---
 </div>
 
-- **Status**: public release v1.11.0, 2026-11-09 (portability matrix and disclosure timeline published, patch-state check against php.net and php-src, plus the v1.0.0→latest pointer; official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, measured ASLR scope per read size, per-run 9bie transcripts, and the published measurement harness).
+- **Status**: public release v1.12.0, 2026-11-09 (portability matrix and disclosure timeline published, patch-state check against php.net and php-src, plus the v1.0.0→latest pointer; official stock distribution image calibration, FastCGI stdout isolation proofs, SAPI architecture disambiguation, measured ASLR scope per read size, per-run 9bie transcripts, and the published measurement harness).
 - **Scope**: PHP 8.4.x and adjacent branches (8.2, 8.3, 8.5), official PHP container images, public proof-of-concept code, and independent lab reproduction.
 - **Application scope**: a Nextcloud 33.0.x test deployment (PHP 8.4.21, Apache `mod_php` prefork) was used to validate the exposed configuration and patch level. The RCE proof was obtained on the official `php:8.4.26-apache` image. The bug is in PHP request startup, not Nextcloud code.
 - **Artifacts**: `PORTABILITY.md` (the measured matrix of what gates the chain), `TIMELINE.md` (disclosure timeline with sources), formal typography PDF releases (`REPORT.pdf` and `RESUMEN.pdf`), reproducible lab instrumentation (`tooling/labkit/` and `tooling/docker-compose.yml`), non-destructive diagnostic tooling (`tooling/checker/`), offline reachability calculators, and detection rules.
@@ -157,6 +157,28 @@ cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
 ```
 
 ---
+
+## Related work
+
+This report does not re-derive the root cause. It measures what other write-ups claim, and says
+what reproduced. The root-cause work is theirs:
+
+- **Wiz** (co-discoverer) — root cause and the three multipart vectors that land the OOM.
+- **CrowdStrike** — the bookkeeping detail: `_zend_hash_str_add_or_update_i` increments the entry
+  count before `zend_string_init()` can fail, and the bucket array comes from an uninitialized
+  `emalloc`. Also tracks three distinct flaws under the two CVEs.
+- **Keysight** — a call-chain walkthrough with packet captures, from the multipart body down to
+  `nNumUsed` being incremented ahead of the allocation.
+- **mekhalleh/php2shell-advisory** — the ordering bug with source lines (`main/main.c:1873`
+  before `1874`), the fix (`php_basic_early_rinit()`), and a passive Nuclei template.
+- **Exaforce** — why the early "session upload-progress use-after-free" framing was a trigger and
+  not the root cause.
+- **9bie** — the HTTP-only ASLR technique this report measures; **ikow** — the five-chain PoC set
+  reviewed in `POCS.md`.
+
+What this repository adds, and the reason to read it second: per-cell counts with controls across
+8.4.21/8.4.26/8.4.27/8.5.12, the portability matrix, the retracted claims, and the conditions
+under which each number holds or does not.
 
 ## Repository contents
 
