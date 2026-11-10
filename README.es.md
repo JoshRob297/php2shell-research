@@ -3,7 +3,7 @@
 # php2shell — Verificación Independiente y Auditoría de Límites de Explotación
 ### CVE-2026-109618 · CVE-2026-109619 · CVE-2026-115560
 
-[![Release](https://img.shields.io/badge/Release-v1.11.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.11.0)
+[![Release](https://img.shields.io/badge/Release-v1.12.0_(2026--11--09)-0284c7?style=flat-square&logo=github)](https://github.com/JoshRob297/php2shell-research/releases/tag/v1.12.0)
 [![Target](https://img.shields.io/badge/Objetivos_PHP-8.2_·_8.3_·_8.4_·_8.5-334155?style=flat-square)](#)
 [![CVSS](https://img.shields.io/badge/CVSS_v4.0-9.2_CRÍTICO-b91c1c?style=flat-square)](#)
 [![ASLR](https://img.shields.io/badge/ASLR-Ventana_Cookie_1.88_MB-d97706?style=flat-square)](#)
@@ -158,6 +158,28 @@ cd lab && python3 -m pytest tests/ exploit/tests/ -q   # 147 passed, 4 skipped
 ```
 
 ---
+
+## Trabajo relacionado
+
+Este informe no vuelve a derivar la causa raíz: mide lo que afirman otros textos y dice qué se
+reprodujo. El trabajo de causa raíz es suyo:
+
+- **Wiz** (codescubridor) — la causa raíz y los tres vectores multipart que producen el OOM.
+- **CrowdStrike** — el detalle de contabilidad: `_zend_hash_str_add_or_update_i` incrementa el
+  contador de entradas antes de que `zend_string_init()` pueda fallar, y el arreglo de buckets
+  viene de un `emalloc` sin inicializar. Además separa tres fallos bajo las dos CVE.
+- **Keysight** — recorrido de la cadena de llamadas con capturas de paquete, desde el cuerpo
+  multipart hasta `nNumUsed` incrementado antes de la asignación.
+- **mekhalleh/php2shell-advisory** — el bug de orden con líneas de código (`main/main.c:1873`
+  antes de `1874`), el arreglo (`php_basic_early_rinit()`) y una plantilla pasiva de Nuclei.
+- **Exaforce** — por qué el encuadre temprano de "use-after-free en session upload progress" era
+  un disparador y no la causa raíz.
+- **9bie** — la técnica de ASLR solo por HTTP que este informe mide; **ikow** — el conjunto de
+  cinco cadenas revisado en `POCS.es.md`.
+
+Lo que añade este repositorio, y la razón para leerlo en segundo lugar: conteos por celda con
+controles en 8.4.21/8.4.26/8.4.27/8.5.12, la matriz de portabilidad, los claims retirados y las
+condiciones en que cada número se sostiene o no.
 
 ## Contenido del Repositorio
 

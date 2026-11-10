@@ -32,6 +32,9 @@ the order of events checkable: several claims in circulation only make sense aga
 | 2026-10-24 | **Lab:** the cookie leak does not exist on FPM (A kills the worker, exit 70); on `mod_php` the leak and the dangling `BG(unserialize)` primitive are mutually exclusive — the Off + ASLR-on route is closed on both paths | this project |
 | 2026-10-24 | **Lab:** `post_max_size` bypass with chunked confirmed (ikow's chain D claim): 30 MB chunked parses whole, 70 MB chunked OOMs during request startup at 128M/8M | this project |
 | 2026-11-09 | Latest stable is still 8.4.27 / 8.5.12; 8.4.28 and 8.5.13 are RC1 only; CVE-2026-115560 still has no stable fix | php.net, php-src |
+| 2026-10-26 | **CISA adds both CVEs to KEV**, federal due date 29 Oct | CISA |
+| 2026-10-27 | Press confirms exploitation and the three-day deadline for agencies | The Register |
+| 2026-10-28 | KEV adds CVE-2026-46300 (Linux kernel), documented as chainable with this pair to reach root | CISA |
 
 ## Notes
 
