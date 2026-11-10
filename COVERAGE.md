@@ -4,6 +4,18 @@
 
 ---
 
+## Patch state (checked 2026-11-09)
+
+- **Latest stable is 8.4.27 / 8.5.12** (21 Oct). No 8.4.28 or 8.5.13 has shipped: both are
+  tagged RC1 on 3–4 Nov, for testing only.
+- **CVE-2026-115560 has no stable fix.** The full advisory is still unpublished and the
+  23 Oct mitigation stands: `session.upload_progress.enabled=0`.
+- **`ext/session: prevent creation of fixed sid in php_session_rfc1867` (php-src PR #22113) is
+  still open**, so the fixed-SID guard recorded as absent in §3 is absent from every release.
+- **8.4.27 / 8.5.12 shipped a regression**: GH-24488, a `SimpleXMLElement` GC double free that
+  ends in `zend_mm_heap corrupted`. Fixed in php-src for 8.4.28, which has not shipped. If a
+  host on 8.4.27 corrupts its heap under heavy SimpleXML use, it is not this cluster.
+
 Status definitions:
 
 - **fail**: the vulnerability or chain succeeded in the tested conditions.
