@@ -59,6 +59,18 @@
 - Apache `mod_php`: https://httpd.apache.org/docs/2.4/mod/mod_php.html
 - nginx request buffering: https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_request_buffering
 
+## Root cause and analysis (external)
+
+- Wiz, vulnerability entry: https://www.wiz.io/vulnerability-database/cve/cve-2026-109618
+- CrowdStrike, weaponization obstacles: https://www.crowdstrike.com/en-us/blog/obstacles-to-weaponizing-php2shell-likely-constrain-exploitation/
+- Keysight, call-chain walkthrough: https://www.keysight.com/blogs/en/tech/nwvs/2026/10/28/inside-php2shell-understanding-cve-2026-109618-and-cve-2026-109619
+- mekhalleh, ordering bug with source lines: https://github.com/mekhalleh/php2shell-advisory
+- Exaforce, on the early framing: https://www.exaforce.com/blogs/php2shell-php-rce-analysis
+- FranklinF25, finding sheet incl. FPM arms: https://github.com/FranklinF25/php2shell/blob/main/docs/finding-sheet.md
+- NCSC-NL, operational information: https://github.com/NCSC-NL/php2shell
+- Assetnote/Searchlight scanner: https://github.com/assetnote/php2shell-scanner
+- CISA KEV, both CVEs added 2026-10-26: https://www.cisa.gov/news-events/alerts/2026/10/26/cisa-adds-two-known-exploited-vulnerabilities-catalog
+
 ## Notes
 
 Third-party PoCs and quoted material remain under their own licenses. This repository does not

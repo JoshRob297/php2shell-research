@@ -39,6 +39,18 @@
 - dinosn, RCE asistido en lab: https://github.com/dinosn/php-cve-2026-10961x-lab-poc
 - php2shellbt, escáner (falso positivo comprobado): https://github.com/pentestershell/php2shellbt
 
+## Causa raíz y análisis (externo)
+
+- Wiz, ficha de la vulnerabilidad: https://www.wiz.io/vulnerability-database/cve/cve-2026-109618
+- CrowdStrike, obstáculos a la weaponización: https://www.crowdstrike.com/en-us/blog/obstacles-to-weaponizing-php2shell-likely-constrain-exploitation/
+- Keysight, recorrido de la cadena de llamadas: https://www.keysight.com/blogs/en/tech/nwvs/2026/10/28/inside-php2shell-understanding-cve-2026-109618-and-cve-2026-109619
+- mekhalleh, el bug de orden con líneas de código: https://github.com/mekhalleh/php2shell-advisory
+- Exaforce, sobre el encuadre temprano: https://www.exaforce.com/blogs/php2shell-php-rce-analysis
+- FranklinF25, hoja de hallazgos con los brazos FPM: https://github.com/FranklinF25/php2shell/blob/main/docs/finding-sheet.md
+- NCSC-NL, información operativa: https://github.com/NCSC-NL/php2shell
+- Escáner de Assetnote/Searchlight: https://github.com/assetnote/php2shell-scanner
+- CISA KEV, ambas CVE agregadas el 2026-10-26: https://www.cisa.gov/news-events/alerts/2026/10/26/cisa-adds-two-known-exploited-vulnerabilities-catalog
+
 ## Notas
 
 Las PoCs de terceros y material citado permanecen bajo sus respectivas licencias. Este repositorio no redistribuye código ejecutable de las mismas.
