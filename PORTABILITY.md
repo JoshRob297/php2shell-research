@@ -47,3 +47,16 @@ and which ones only look like gates.
 
 This is the answer to "why does the public PoC work on my machine and not on yours": the
 difference is usually the worker pool, the proxy buffering, or `KeepAlive`, not the PHP build.
+
+## Provenance
+
+Every cell was measured in the lab described in `METHODOLOGY.md`. The rows that need only the
+checker and the stock images are reproducible with `make up`; the saturated-worker, proxy and
+`KeepAlive` rows were driven by request-sequence scripts that carry the operational bodies, so
+those transcripts stay in the private lab log rather than in this repository. The 9bie rows have
+their raw sweeps committed (`raw/9bie-aslr-on-8run.txt`, `raw/9bie-aslr-off-5run.txt`,
+`raw/9bie-display-off-3run.txt`).
+
+If a number here does not reproduce on your host, the first three things to check are the worker
+pool, the proxy buffering mode and `KeepAlive` — in that order, because that is the order in
+which they break the chain.

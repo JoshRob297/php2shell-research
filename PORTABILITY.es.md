@@ -46,3 +46,15 @@ cadena y cuáles solo lo parecen.
 
 Esta es la respuesta a "por qué la PoC pública funciona en mi máquina y en la tuya no": la
 diferencia suele ser el pool de workers, el buffering del proxy o `KeepAlive`, no el build de PHP.
+
+## Procedencia
+
+Cada celda se midió en el laboratorio descrito en `METHODOLOGY.md`. Las filas que solo necesitan
+el checker y las imágenes oficiales se reproducen con `make up`; las de saturación de workers,
+proxy y `KeepAlive` se condujeron con secuencias de peticiones que llevan los cuerpos operativos,
+así que esas transcripciones se quedan en el registro privado del laboratorio y no en este
+repositorio. Las filas de 9bie tienen sus barridos en `raw/9bie-aslr-on-8run.txt`,
+`raw/9bie-aslr-off-5run.txt` y `raw/9bie-display-off-3run.txt`.
+
+Si un número no se reproduce en tu host, revisa en este orden el pool de workers, el modo de
+buffering del proxy y `KeepAlive`: es el orden en que rompen la cadena.
